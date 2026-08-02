@@ -98,9 +98,10 @@ const HexMath = {
 // ==========================================================================
 const AppState = {
   orientation: 'pointy', // 'pointy' | 'flat'
-  displayMode: 'dense', // 'dense' (1 LED = 1 Hexagon pixel default) | 'modular' (perimeter)
+  displayMode: 'dense', // 'dense' (1 LED = 1 Hexagon pixel default) | 'modular' (phase / perimeter)
   hexRadius: 46,
-  ledsPerEdge: 3,
+  ledsPerPhase: 8, // LEDs per face / side (phase)
+  cornerMode: 'shared', // 'shared' (1 common corner LED per vertex) | 'discrete'
   defaultStartCorner: 0,
   defaultDirection: 'cw', // 'cw' | 'ccw'
   
@@ -219,6 +220,17 @@ const Templates = {
 // ==========================================================================
 // 4. Core Mesh & LED Computation
 // ==========================================================================
+function getLedsPerHex() {
+  if (AppState.displayMode === 'dense') return 1;
+  const N = AppState.ledsPerPhase;
+  if (AppState.cornerMode === 'shared') {
+    // 6 phases with 1 common corner LED per vertex
+    return 6 * Math.max(1, N - 1);
+  }
+  // Discrete edges without corner sharing
+  return 6 * N;
+}
+
 function recomputeLeds() {
   AppState.cachedLeds = [];
   let globalLedIndex = 0;
@@ -232,12 +244,17 @@ function recomputeLeds() {
     .map(id => hexMap.get(id))
     .filter(Boolean);
 
+  const isDense = AppState.displayMode === 'dense';
+  const isShared = AppState.cornerMode === 'shared';
+  const N = AppState.ledsPerPhase;
+  const M = isShared ? Math.max(1, N - 1) : N;
+
   activeChain.forEach((hex, chainIdx) => {
     const center = HexMath.axialToPixel(hex.q, hex.r, AppState.hexRadius, AppState.orientation);
     const startCorner = hex.startCornerOverride !== undefined ? hex.startCornerOverride : AppState.defaultStartCorner;
     const dir = hex.dirOverride || AppState.defaultDirection;
 
-    if (AppState.displayMode === 'dense') {
+    if (isDense) {
       // 1 LED at center
       AppState.cachedLeds.push({
         globalIndex: globalLedIndex++,
@@ -248,26 +265,30 @@ function recomputeLeds() {
         r: 255, g: 255, b: 255
       });
     } else {
-      // Modular Perimeter Mode (6 * ledsPerEdge)
+      // Phase / Perimeter Mode (6 phases with N LEDs each, with optional common corner LED)
       const corners = HexMath.getHexCorners(center.x, center.y, AppState.hexRadius, AppState.orientation);
-      const E = AppState.ledsPerEdge;
 
-      for (let side = 0; side < 6; side++) {
-        const edgeIdx = dir === 'cw' ? (startCorner + side) % 6 : (startCorner - side + 6) % 6;
+      for (let phase = 0; phase < 6; phase++) {
+        const edgeIdx = dir === 'cw' ? (startCorner + phase) % 6 : (startCorner - phase + 6) % 6;
         const nextEdgeIdx = dir === 'cw' ? (edgeIdx + 1) % 6 : (edgeIdx - 1 + 6) % 6;
 
         const p1 = corners[edgeIdx];
         const p2 = corners[nextEdgeIdx];
 
-        for (let k = 0; k < E; k++) {
-          const t = (k + 0.5) / E;
+        for (let k = 0; k < M; k++) {
+          const t = isShared ? (k / M) : ((k + 0.5) / M);
           const lx = p1.x + (p2.x - p1.x) * t;
           const ly = p1.y + (p2.y - p1.y) * t;
+          const isCorner = isShared && (k === 0);
 
           AppState.cachedLeds.push({
             globalIndex: globalLedIndex++,
             hexId: hex.id,
             hexSeq: chainIdx + 1,
+            phase: phase + 1,
+            phaseStep: k + 1,
+            isCorner: isCorner,
+            cornerIdx: isCorner ? edgeIdx : null,
             x: lx,
             y: ly,
             r: 255, g: 255, b: 255
@@ -354,10 +375,11 @@ function compute2DMatrix() {
     return;
   }
 
-  // Modular Perimeter: scale based on LEDs per edge and span
-  const ledSpacing = (AppState.hexRadius * 2 * Math.PI) / (6 * AppState.ledsPerEdge);
-  cols = Math.max(2, Math.round(spanX / ledSpacing) + 2);
-  rows = Math.max(2, Math.round(spanY / ledSpacing) + 2);
+  // Modular / Phase Perimeter: scale based on LEDs per hex and span
+  const ledsPerHex = getLedsPerHex();
+  const ledSpacing = (AppState.hexRadius * 2 * Math.PI) / Math.max(1, ledsPerHex);
+  cols = Math.max(2, Math.round(spanX / Math.max(1, ledSpacing)) + 2);
+  rows = Math.max(2, Math.round(spanY / Math.max(1, ledSpacing)) + 2);
 
   // Ensure reasonable bounds
   cols = Math.min(128, Math.max(3, cols));
@@ -974,7 +996,7 @@ const Exporters = {
     AppState.hexagons.forEach(h => hexMap.set(h.id, h));
     const activeChain = AppState.wiringChain.map(id => hexMap.get(id)).filter(Boolean);
 
-    const ledsPerHex = AppState.displayMode === 'dense' ? 1 : 6 * AppState.ledsPerEdge;
+    const ledsPerHex = getLedsPerHex();
     const segs = activeChain.map((hex, idx) => ({
       id: idx,
       start: idx * ledsPerHex,
@@ -1116,7 +1138,7 @@ function renderBlueprintCanvas() {
     bpCtx.textBaseline = 'middle';
     bpCtx.fillText(`HEX #${chainIdx + 1}`, center.x, center.y - 8);
 
-    const ledsPerHex = AppState.displayMode === 'dense' ? 1 : 6 * AppState.ledsPerEdge;
+    const ledsPerHex = getLedsPerHex();
     const startLed = chainIdx * ledsPerHex;
     const endLed = (chainIdx + 1) * ledsPerHex - 1;
     bpCtx.font = '500 10px JetBrains Mono, monospace';
@@ -1223,7 +1245,24 @@ function updateUIStats() {
   }
 
   // Update Inspector if an item is selected
+  updatePhaseDisplay();
   updateInspectorUI();
+}
+
+function updatePhaseDisplay() {
+  const N = AppState.ledsPerPhase;
+  const isShared = AppState.cornerMode === 'shared';
+  const total = isShared ? 6 * Math.max(1, N - 1) : 6 * N;
+  const valBadge = document.getElementById('valLedsPerHex');
+  const valBreakdown = document.getElementById('valPhaseBreakdown');
+  if (valBadge) valBadge.textContent = `${total} LEDs`;
+  if (valBreakdown) {
+    if (isShared) {
+      valBreakdown.textContent = `6 Phases × ${N} LEDs with 1 common corner LED = ${total} LEDs`;
+    } else {
+      valBreakdown.textContent = `6 Phases × ${N} LEDs (discrete edges) = ${total} LEDs`;
+    }
+  }
 }
 
 function updateInspectorUI() {
@@ -1241,7 +1280,7 @@ function updateInspectorUI() {
   details.style.display = 'block';
 
   const chainIdx = AppState.wiringChain.indexOf(hex.id);
-  const ledsPerHex = AppState.displayMode === 'dense' ? 1 : 6 * AppState.ledsPerEdge;
+  const ledsPerHex = getLedsPerHex();
   const startLed = chainIdx >= 0 ? chainIdx * ledsPerHex : 0;
   const endLed = chainIdx >= 0 ? (chainIdx + 1) * ledsPerHex - 1 : 0;
 
@@ -1273,34 +1312,37 @@ function showToast(msg, type = 'info') {
 function setupCanvasInteractions() {
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
 
     if (AppState.camera.isDragging) {
-      AppState.camera.x = mouseX - AppState.camera.dragStartX;
-      AppState.camera.y = mouseY - AppState.camera.dragStartY;
+      AppState.camera.x += (mx - AppState.camera.dragStartX) / AppState.camera.zoom;
+      AppState.camera.y += (my - AppState.camera.dragStartY) / AppState.camera.zoom;
+      AppState.camera.dragStartX = mx;
+      AppState.camera.dragStartY = my;
       return;
     }
 
-    // Convert mouse screen coordinates to world coordinates
-    const worldX = (mouseX - rect.width / 2 - AppState.camera.x) / AppState.camera.zoom;
-    const worldY = (mouseY - rect.height / 2 - AppState.camera.y) / AppState.camera.zoom;
-
-    AppState.hoverAxial = HexMath.pixelToAxial(worldX, worldY, AppState.hexRadius, AppState.orientation);
+    const world = screenToWorld(mx, my);
+    AppState.hoverAxial = HexMath.pixelToAxial(world.x, world.y, AppState.hexRadius, AppState.orientation);
   });
 
   canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 1 || e.shiftKey || e.altKey) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && e.shiftKey)) {
       // Pan Camera
       AppState.camera.isDragging = true;
-      const rect = canvas.getBoundingClientRect();
-      AppState.camera.dragStartX = (e.clientX - rect.left) - AppState.camera.x;
-      AppState.camera.dragStartY = (e.clientY - rect.top) - AppState.camera.y;
+      AppState.camera.dragStartX = mx;
+      AppState.camera.dragStartY = my;
       return;
     }
 
-    if (e.button === 0 && AppState.hoverAxial) {
-      const axial = AppState.hoverAxial;
+    if (e.button === 0) {
+      const world = screenToWorld(mx, my);
+      const axial = HexMath.pixelToAxial(world.x, world.y, AppState.hexRadius, AppState.orientation);
       const existing = AppState.hexagons.find(h => h.q === axial.q && h.r === axial.r);
 
       if (AppState.currentTool === 'add') {
@@ -1397,6 +1439,7 @@ function setupUIBindings() {
     document.getElementById('modeModularLabel').classList.add('active');
     document.getElementById('modeDenseLabel').classList.remove('active');
     document.getElementById('perimeterSettingsSection').style.display = 'block';
+    updatePhaseDisplay();
     recomputeLeds();
   });
   document.getElementById('modeDense').addEventListener('change', () => {
@@ -1407,25 +1450,39 @@ function setupUIBindings() {
     recomputeLeds();
   });
 
-  // LEDs per Edge Counter
-  const edgeInput = document.getElementById('ledsPerEdge');
-  document.getElementById('btnIncEdge').addEventListener('click', () => {
-    edgeInput.value = Math.min(25, parseInt(edgeInput.value) + 1);
-    AppState.ledsPerEdge = parseInt(edgeInput.value);
-    document.getElementById('valLedsPerHex').textContent = `${AppState.ledsPerEdge * 6} LEDs`;
-    recomputeLeds();
-  });
-  document.getElementById('btnDecEdge').addEventListener('click', () => {
-    edgeInput.value = Math.max(1, parseInt(edgeInput.value) - 1);
-    AppState.ledsPerEdge = parseInt(edgeInput.value);
-    document.getElementById('valLedsPerHex').textContent = `${AppState.ledsPerEdge * 6} LEDs`;
-    recomputeLeds();
-  });
-  edgeInput.addEventListener('change', () => {
-    AppState.ledsPerEdge = Math.max(1, Math.min(25, parseInt(edgeInput.value) || 1));
-    document.getElementById('valLedsPerHex').textContent = `${AppState.ledsPerEdge * 6} LEDs`;
-    recomputeLeds();
-  });
+  // Phase LED Inputs
+  const phaseInput = document.getElementById('ledsPerPhase');
+  if (phaseInput) {
+    document.getElementById('btnIncPhase').addEventListener('click', () => {
+      phaseInput.value = Math.min(64, (parseInt(phaseInput.value) || 8) + 1);
+      AppState.ledsPerPhase = parseInt(phaseInput.value);
+      updatePhaseDisplay();
+      recomputeLeds();
+    });
+    document.getElementById('btnDecPhase').addEventListener('click', () => {
+      phaseInput.value = Math.max(2, (parseInt(phaseInput.value) || 8) - 1);
+      AppState.ledsPerPhase = parseInt(phaseInput.value);
+      updatePhaseDisplay();
+      recomputeLeds();
+    });
+    phaseInput.addEventListener('change', () => {
+      AppState.ledsPerPhase = Math.max(2, Math.min(64, parseInt(phaseInput.value) || 8));
+      updatePhaseDisplay();
+      recomputeLeds();
+    });
+  }
+
+  // Corner Sharing Select
+  const cornerSelect = document.getElementById('cornerSharingSelect');
+  if (cornerSelect) {
+    cornerSelect.addEventListener('change', (e) => {
+      AppState.cornerMode = e.target.value;
+      updatePhaseDisplay();
+      recomputeLeds();
+    });
+  }
+
+
 
   // Start Corner & Direction
   document.getElementById('defaultStartCorner').addEventListener('change', (e) => {
@@ -1616,10 +1673,11 @@ function setupUIBindings() {
   // Project Save & Load
   document.getElementById('btnProjectSave').addEventListener('click', () => {
     const project = {
-      version: '2.0',
+      version: '2.1',
       orientation: AppState.orientation,
       displayMode: AppState.displayMode,
-      ledsPerEdge: AppState.ledsPerEdge,
+      ledsPerPhase: AppState.ledsPerPhase,
+      cornerMode: AppState.cornerMode,
       defaultStartCorner: AppState.defaultStartCorner,
       defaultDirection: AppState.defaultDirection,
       hexagons: AppState.hexagons,
@@ -1639,12 +1697,19 @@ function setupUIBindings() {
         const proj = JSON.parse(ev.target.result);
         if (proj.hexagons && proj.wiringChain) {
           AppState.orientation = proj.orientation || 'pointy';
-          AppState.displayMode = proj.displayMode || 'modular';
-          AppState.ledsPerEdge = proj.ledsPerEdge || 3;
+          AppState.displayMode = proj.displayMode || 'dense';
+          AppState.ledsPerPhase = proj.ledsPerPhase || proj.ledsPerEdge || 8;
+          AppState.cornerMode = proj.cornerMode || 'shared';
           AppState.defaultStartCorner = proj.defaultStartCorner || 0;
           AppState.defaultDirection = proj.defaultDirection || 'cw';
           AppState.hexagons = proj.hexagons;
           AppState.wiringChain = proj.wiringChain;
+
+          const phaseIn = document.getElementById('ledsPerPhase');
+          if (phaseIn) phaseIn.value = AppState.ledsPerPhase;
+          const cornerSel = document.getElementById('cornerSharingSelect');
+          if (cornerSel) cornerSel.value = AppState.cornerMode;
+
           recomputeLeds();
           showToast('Project loaded successfully! 🚀');
         }

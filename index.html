@@ -132,26 +132,41 @@
         </div>
       </section>
 
-      <!-- Modular LED Geometry Settings -->
+      <!-- Phase & Perimeter LED Geometry Settings -->
       <section class="panel-section" id="perimeterSettingsSection" style="display: none;">
-        <div class="section-title">Perimeter LED Configuration</div>
+        <div class="section-title">Phase LED Configuration</div>
+        
         <div class="form-row">
-          <label for="ledsPerEdge">LEDs per Edge</label>
+          <label for="ledsPerPhase">LEDs per Phase (Side / Face)</label>
           <div class="number-input-group">
-            <button class="num-btn" id="btnDecEdge">-</button>
-            <input type="number" id="ledsPerEdge" min="1" max="25" value="3">
-            <button class="num-btn" id="btnIncEdge">+</button>
-          </div>
-        </div>
-        <div class="stat-badge-row">
-          <div class="stat-badge">
-            <span class="badge-label">LEDs / Hex:</span>
-            <span class="badge-val" id="valLedsPerHex">18 LEDs</span>
+            <button class="num-btn" id="btnDecPhase">-</button>
+            <input type="number" id="ledsPerPhase" min="2" max="64" value="8">
+            <button class="num-btn" id="btnIncPhase">+</button>
           </div>
         </div>
 
         <div class="form-row">
-          <label for="defaultStartCorner">Default Start Corner</label>
+          <label for="cornerSharingSelect">Corner Vertex Sharing</label>
+          <select id="cornerSharingSelect" class="btn-select full-width">
+            <option value="shared" selected>1 Common LED per Corner (Shared Vertex)</option>
+            <option value="discrete">No Sharing (Discrete Edge Strips)</option>
+          </select>
+        </div>
+
+        <div class="stat-badge-row">
+          <div class="stat-badge full-width" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; width: 100%;">
+              <span class="badge-label">Total LEDs / Hex:</span>
+              <span class="badge-val cyan" id="valLedsPerHex">42 LEDs</span>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted);" id="valPhaseBreakdown">
+              6 Phases × 8 LEDs with 1 common corner LED = 42 LEDs
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="defaultStartCorner">Default Start Vertex</label>
           <select id="defaultStartCorner" class="btn-select full-width">
             <option value="0">Vertex 0 (Top / Top-Right)</option>
             <option value="1">Vertex 1 (Right / Bottom-Right)</option>

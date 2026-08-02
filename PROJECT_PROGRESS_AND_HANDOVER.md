@@ -7,7 +7,7 @@
 
 ## 📌 1. Project Overview & Context
 
-- **Repository**: [`git@github.com:gagansharma18/WLED_honeycom_hexagon_map_generator.git`](https://github.com/gagansharma18/WLED_honeycom_hexagon_map_generator.git)
+- **Repository**: [`git@github.com:gagansharma18/WLED_honeycomb_hexagon_map_generator.git`](https://github.com/gagansharma18/WLED_honeycomb_hexagon_map_generator.git)
 - **Local Directory**: `/Users/gagansharma/Documents/GitHub/WLED_honeycom_hexagon_map_generator`
 - **Technology Stack**:
   - **Core Logic**: Modern Vanilla JavaScript (ES6+ Modules / Pure Math Engine)

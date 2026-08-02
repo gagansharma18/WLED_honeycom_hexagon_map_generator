@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HexaMap WLED — Honeycomb LED Display Mapper & Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-container">
+        <svg class="logo-icon" viewBox="0 0 32 32" width="28" height="28">
+          <polygon points="16,2 29,9.5 29,24.5 16,32 3,24.5 3,9.5" fill="none" stroke="url(#hex-grad)" stroke-width="2.5" stroke-linejoin="round"/>
+          <circle cx="16" cy="17" r="4" fill="url(#hex-grad)"/>
+          <defs>
+            <linearGradient id="hex-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00f2fe" />
+              <stop offset="100%" stop-color="#4facfe" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="logo-text">
+          <span class="brand-name">HexaMap<span class="highlight">WLED</span></span>
+          <span class="version-tag">v2.0</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Presets & Templates Dropdown -->
+      <div class="control-group">
+        <label for="templateSelect" class="sr-only">Layout Template</label>
+        <select id="templateSelect" class="btn-select">
+          <option value="" disabled selected>✨ Load Template...</option>
+          <option value="single">Single Hex (1)</option>
+          <option value="flower7">7-Hex Flower Cluster</option>
+          <option value="flower19">19-Hex Mega Honeycomb</option>
+          <option value="ring18">18-Hex Concentric Rings</option>
+          <option value="pyramid10">10-Hex Triangle Pyramid</option>
+          <option value="diamond9">9-Hex Diamond Array</option>
+          <option value="snake7">7-Hex Serpentine Line</option>
+        </select>
+      </div>
+
+      <!-- Orientation & Mode Switchers -->
+      <div class="segmented-control" id="orientationControl" title="Hexagon Orientation">
+        <button class="seg-btn active" data-orientation="pointy" id="btnPointy" title="Pointy-Topped Orientation">
+          <svg viewBox="0 0 16 16" width="14" height="14"><polygon points="8,1 15,5 15,11 8,15 1,11 1,5" fill="currentColor"/></svg>
+          <span>Pointy</span>
+        </button>
+        <button class="seg-btn" data-orientation="flat" id="btnFlat" title="Flat-Topped Orientation">
+          <svg viewBox="0 0 16 16" width="14" height="14"><polygon points="1,8 5,1 11,1 15,8 11,15 5,15" fill="currentColor"/></svg>
+          <span>Flat</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Header Actions -->
+    <div class="header-right">
+      <button class="btn btn-secondary" id="btnProjectSave" title="Save Project JSON">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        <span>Save</span>
+      </button>
+      <button class="btn btn-secondary" id="btnProjectLoad" title="Load Project JSON">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <span>Open</span>
+      </button>
+      <input type="file" id="fileInput" accept=".json" style="display:none">
+
+      <button class="btn btn-secondary" id="btnBlueprint" title="Wiring Blueprint & Assembly Guide">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+        <span>Blueprint</span>
+      </button>
+
+      <button class="btn btn-primary glow-btn" id="btnExport" title="Export WLED ledmap.json & Code">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span>Export WLED Map</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace Layout -->
+  <div class="app-layout">
+    <!-- Left Sidebar: Tools, Structure & Wiring -->
+    <aside class="sidebar left-sidebar">
+      <!-- Toolbar Mode Selector -->
+      <section class="panel-section">
+        <div class="section-title">Editor Tools</div>
+        <div class="tool-grid">
+          <button class="tool-btn active" data-tool="add" id="toolAdd" title="Click grid to add hexagons">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span>Add Hex</span>
+          </button>
+          <button class="tool-btn" data-tool="select" id="toolSelect" title="Select & configure hex">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
+            <span>Select</span>
+          </button>
+          <button class="tool-btn" data-tool="wire" id="toolWire" title="Click hexagons sequentially to define custom wiring chain">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            <span>Wire Path</span>
+          </button>
+          <button class="tool-btn" data-tool="delete" id="toolDelete" title="Click hexagon to delete">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Delete</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Display Architecture Mode -->
+      <section class="panel-section">
+        <div class="section-title">Display Mode</div>
+        <div class="radio-card-group">
+          <label class="radio-card active" id="modeModularLabel">
+            <input type="radio" name="displayMode" value="modular" checked id="modeModular">
+            <div class="card-content">
+              <span class="card-title">Perimeter Panels</span>
+              <span class="card-desc">LEDs along outer hex edges (Nanoleaf / 3D modules)</span>
+            </div>
+          </label>
+          <label class="radio-card" id="modeDenseLabel">
+            <input type="radio" name="displayMode" value="dense" id="modeDense">
+            <div class="card-content">
+              <span class="card-title">Dense Hex Matrix</span>
+              <span class="card-desc">1 LED per hexagon center (Honeycomb pixel array)</span>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <!-- Modular LED Geometry Settings -->
+      <section class="panel-section" id="perimeterSettingsSection">
+        <div class="section-title">Perimeter LED Configuration</div>
+        <div class="form-row">
+          <label for="ledsPerEdge">LEDs per Edge</label>
+          <div class="number-input-group">
+            <button class="num-btn" id="btnDecEdge">-</button>
+            <input type="number" id="ledsPerEdge" min="1" max="25" value="3">
+            <button class="num-btn" id="btnIncEdge">+</button>
+          </div>
+        </div>
+        <div class="stat-badge-row">
+          <div class="stat-badge">
+            <span class="badge-label">LEDs / Hex:</span>
+            <span class="badge-val" id="valLedsPerHex">18 LEDs</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="defaultStartCorner">Default Start Corner</label>
+          <select id="defaultStartCorner" class="btn-select full-width">
+            <option value="0">Vertex 0 (Top / Top-Right)</option>
+            <option value="1">Vertex 1 (Right / Bottom-Right)</option>
+            <option value="2">Vertex 2 (Bottom-Right / Bottom)</option>
+            <option value="3">Vertex 3 (Bottom / Bottom-Left)</option>
+            <option value="4">Vertex 4 (Bottom-Left / Left)</option>
+            <option value="5">Vertex 5 (Top-Left)</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="defaultDirection">LED Winding Direction</label>
+          <div class="segmented-control full-width" id="directionControl">
+            <button class="seg-btn active" data-dir="cw" id="btnDirCW">Clockwise ↻</button>
+            <button class="seg-btn" data-dir="ccw" id="btnDirCCW">Counter-CW ↺</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Auto Wiring Algorithms -->
+      <section class="panel-section">
+        <div class="section-title">Auto-Wiring Route</div>
+        <div class="btn-row">
+          <button class="btn btn-sm btn-secondary" id="btnAutoWireSerpentine" title="Route rows alternately left-to-right & right-to-left">
+            Serpentine
+          </button>
+          <button class="btn btn-sm btn-secondary" id="btnAutoWireSpiral" title="Route in an outward spiral from center">
+            Spiral Out
+          </button>
+          <button class="btn btn-sm btn-secondary" id="btnAutoWireRadial" title="Route by distance from center hex">
+            Radial
+          </button>
+        </div>
+        <div class="btn-row" style="margin-top: 8px;">
+          <button class="btn btn-sm btn-ghost danger-text" id="btnClearWiring">
+            Reset Wiring Order
+          </button>
+          <button class="btn btn-sm btn-ghost" id="btnReverseWiring">
+            Invert Chain ⇄
+          </button>
+        </div>
+      </section>
+
+      <!-- Selected Hexagon Inspector -->
+      <section class="panel-section" id="inspectorSection">
+        <div class="section-title">Selected Module Inspector</div>
+        <div id="inspectorEmptyState" class="empty-state">
+          <span>Click a hexagon with the Select tool to view/override properties.</span>
+        </div>
+        <div id="inspectorDetails" class="inspector-content" style="display:none;">
+          <div class="prop-grid">
+            <div class="prop-item">
+              <span class="prop-label">Module ID</span>
+              <span class="prop-value" id="inspId">#1</span>
+            </div>
+            <div class="prop-item">
+              <span class="prop-label">Axial (q, r)</span>
+              <span class="prop-value" id="inspAxial">(0, 0)</span>
+            </div>
+            <div class="prop-item">
+              <span class="prop-label">Chain Index</span>
+              <span class="prop-value highlight" id="inspChain">1 of 7</span>
+            </div>
+            <div class="prop-item">
+              <span class="prop-label">LED Range</span>
+              <span class="prop-value" id="inspLedRange">0 – 17</span>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top: 12px;">
+            <label for="inspStartCorner">Start Vertex Override</label>
+            <select id="inspStartCorner" class="btn-select full-width">
+              <option value="inherit">Inherit Global Default</option>
+              <option value="0">Vertex 0</option>
+              <option value="1">Vertex 1</option>
+              <option value="2">Vertex 2</option>
+              <option value="3">Vertex 3</option>
+              <option value="4">Vertex 4</option>
+              <option value="5">Vertex 5</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="inspDirection">Direction Override</label>
+            <select id="inspDirection" class="btn-select full-width">
+              <option value="inherit">Inherit Global Default</option>
+              <option value="cw">Clockwise ↻</option>
+              <option value="ccw">Counter-CW ↺</option>
+            </select>
+          </div>
+
+          <div class="btn-row" style="margin-top: 8px;">
+            <button class="btn btn-sm btn-danger full-width" id="btnDeleteSelected">Delete Module</button>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Center Interactive Canvas Viewport -->
+    <main class="canvas-viewport" id="viewport">
+      <!-- Floating Canvas Overlay Controls -->
+      <div class="canvas-toolbar">
+        <div class="btn-group">
+          <button class="icon-btn" id="btnZoomIn" title="Zoom In (+)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <button class="icon-btn" id="btnZoomOut" title="Zoom Out (-)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <button class="icon-btn" id="btnResetView" title="Recenter View">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>
+        </div>
+
+        <div class="btn-group">
+          <button class="toggle-pill active" id="toggleLedLabels" title="Toggle Individual LED Numbers">LED #</button>
+          <button class="toggle-pill active" id="toggleWiringLines" title="Toggle Inter-Hexagon Wiring Lines">Wires</button>
+          <button class="toggle-pill" id="toggleCoords" title="Toggle Axial (q,r) Coordinates">(q, r)</button>
+          <button class="toggle-pill active" id="toggleSnap" title="Snap to Honeycomb Neighbors">Snap</button>
+        </div>
+
+        <div class="status-pill">
+          <span class="status-indicator"></span>
+          <span id="canvasStatsSummary">7 Hexagons · 126 LEDs</span>
+        </div>
+      </div>
+
+      <!-- Main Interactive Canvas -->
+      <canvas id="mainCanvas"></canvas>
+      
+      <!-- Quick Action Hint Floating Banner -->
+      <div class="quick-hint" id="quickHint">
+        <span>💡 Click any open honeycomb slot to add a hexagon. Drag on canvas to pan. Mouse wheel to zoom.</span>
+      </div>
+    </main>
+
+    <!-- Right Sidebar: Live 2D Matrix Projection & Simulator -->
+    <aside class="sidebar right-sidebar">
+      <!-- Live WLED 2D Matrix Specs & Telemetry -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span>WLED 2D Matrix Grid</span>
+          <span class="badge-tag" id="matrixDimensionsBadge">16 × 14</span>
+        </div>
+        
+        <div class="matrix-stat-cards">
+          <div class="stat-card">
+            <span class="sc-label">Total LEDs</span>
+            <span class="sc-value cyan" id="statTotalLeds">126</span>
+          </div>
+          <div class="stat-card">
+            <span class="sc-label">Grid Bounding</span>
+            <span class="sc-value" id="statBoundingSize">16 × 14</span>
+          </div>
+          <div class="stat-card">
+            <span class="sc-label">Gap Pixels (-1)</span>
+            <span class="sc-value" id="statGapCount">98</span>
+          </div>
+          <div class="stat-card">
+            <span class="sc-label">Fill Efficiency</span>
+            <span class="sc-value" id="statEfficiency">56.2%</span>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top: 10px;">
+          <label for="quantizationDensity">Matrix Sampling Sub-grid</label>
+          <select id="quantizationDensity" class="btn-select full-width">
+            <option value="auto" selected>Auto-Fit (Exact Corner & Edge Match)</option>
+            <option value="1">1x Grid (Fast 2D lookup)</option>
+            <option value="2">2x Grid (Smoother 2D curve interpolation)</option>
+          </select>
+        </div>
+
+        <!-- 2D Matrix Mini-Map Preview -->
+        <div class="matrix-preview-container">
+          <div class="preview-header">
+            <span>2D Cartesian Projection Preview</span>
+            <span id="miniMatrixTooltip" class="dimmed-text">Hover pixel for ID</span>
+          </div>
+          <canvas id="miniMatrixCanvas" width="220" height="180"></canvas>
+        </div>
+      </section>
+
+      <!-- Live WLED FX Simulator -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span>Live FX Simulator</span>
+          <button class="sim-play-btn" id="btnSimPlay" title="Play/Pause Simulator">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" id="simPlayIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span id="simPlayText">Simulate</span>
+          </button>
+        </div>
+
+        <div class="form-row">
+          <label for="fxSelector">WLED Effect</label>
+          <select id="fxSelector" class="btn-select full-width">
+            <option value="rainbow_runner">🌈 Rainbow Edge Runner</option>
+            <option value="plasma_2d" selected>🌌 2D Color Plasma & Noise</option>
+            <option value="radial_ripple">🌊 Expanding Radial Ripple</option>
+            <option value="audio_reactive">🎵 Audio Reactive Pulse (GEQ)</option>
+            <option value="fire_2d">🔥 Fire 2D Matrix</option>
+            <option value="tracer_single">💡 Single LED Tracer (Wiring Test)</option>
+            <option value="solid_color">🎨 Solid Palette Test</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="fxPalette">Color Palette</label>
+          <select id="fxPalette" class="btn-select full-width">
+            <option value="rainbow">Rainbow / Spectrum</option>
+            <option value="cyberpunk" selected>Cyberpunk (Cyan / Magenta / Neon)</option>
+            <option value="ocean">Ocean Breeze (Teal / Deep Blue)</option>
+            <option value="fire">Lava & Fire (Red / Orange / Yellow)</option>
+            <option value="forest">Emerald Forest (Mint / Green)</option>
+            <option value="sunset">Sunset Glow (Purple / Gold)</option>
+          </select>
+        </div>
+
+        <div class="form-row slider-row">
+          <div class="slider-header">
+            <label for="fxSpeed">Animation Speed</label>
+            <span class="slider-val" id="valFxSpeed">1.0x</span>
+          </div>
+          <input type="range" id="fxSpeed" min="0.1" max="3.0" step="0.1" value="1.0" class="custom-slider">
+        </div>
+
+        <div class="form-row slider-row">
+          <div class="slider-header">
+            <label for="fxBrightness">Brightness</label>
+            <span class="slider-val" id="valFxBrightness">100%</span>
+          </div>
+          <input type="range" id="fxBrightness" min="10" max="100" step="5" value="100" class="custom-slider">
+        </div>
+      </section>
+
+      <!-- Hardware & Power Estimator -->
+      <section class="panel-section">
+        <div class="section-title">Hardware & Power Estimation</div>
+        <div class="hardware-specs">
+          <div class="hw-item">
+            <span class="hw-label">Max Power (100% White @ 5V):</span>
+            <span class="hw-val" id="hwPowerMax">7.56 A / 37.8 W</span>
+          </div>
+          <div class="hw-item">
+            <span class="hw-label">Typical Animation Power:</span>
+            <span class="hw-val highlight" id="hwPowerTypical">2.52 A / 12.6 W</span>
+          </div>
+          <div class="hw-item">
+            <span class="hw-label">Recommended PSU:</span>
+            <span class="hw-val" id="hwPowerPSU">5V 4A+ or 12V with buck</span>
+          </div>
+          <div class="hw-item">
+            <span class="hw-label">Power Injections Suggested:</span>
+            <span class="hw-val" id="hwInjections">1 Point (At Start)</span>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- Export Modal -->
+  <div class="modal-backdrop" id="exportModal" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3>Export LED Mapping Configurations</h3>
+          <p>Download or copy the exact files needed for WLED, FastLED, or xLights.</p>
+        </div>
+        <button class="modal-close-btn" id="btnCloseExportModal">&times;</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button class="tab-btn active" data-tab="tabWledMap">WLED ledmap.json</button>
+        <button class="tab-btn" data-tab="tabWledSegments">WLED Segments (Presets)</button>
+        <button class="tab-btn" data-tab="tabFastLed">FastLED / C++ (Arduino)</button>
+        <button class="tab-btn" data-tab="tabXLights">xLights (.xmodel)</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- WLED ledmap.json Tab -->
+        <div class="tab-pane active" id="tabWledMap">
+          <div class="pane-instructions">
+            <span class="badge info">How to use</span>
+            <span>Upload this file as <code>/ledmap.json</code> at <code>http://[your-wled-ip]/edit</code>, or paste into 2D Matrix config in WLED 0.14+.</span>
+          </div>
+          <div class="code-container">
+            <button class="copy-code-btn" id="btnCopyWledMap" title="Copy to clipboard">Copy</button>
+            <pre><code id="codeWledMap"></code></pre>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" id="btnDownloadLedmap">Download ledmap.json</button>
+          </div>
+        </div>
+
+        <!-- WLED Segments Tab -->
+        <div class="tab-pane" id="tabWledSegments">
+          <div class="pane-instructions">
+            <span class="badge info">Segments JSON</span>
+            <span>Allows you to control each hexagon panel as an independent WLED segment with its own colors, palettes, and effects.</span>
+          </div>
+          <div class="code-container">
+            <button class="copy-code-btn" id="btnCopySegments" title="Copy to clipboard">Copy</button>
+            <pre><code id="codeWledSegments"></code></pre>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" id="btnDownloadSegments">Download segments.json</button>
+          </div>
+        </div>
+
+        <!-- FastLED / C++ Tab -->
+        <div class="tab-pane" id="tabFastLed">
+          <div class="pane-instructions">
+            <span class="badge info">Arduino / ESP32</span>
+            <span>Include this 2D lookup function directly into your FastLED or ESP-IDF sketch to address pixels via <code>XY(x, y)</code>.</span>
+          </div>
+          <div class="code-container">
+            <button class="copy-code-btn" id="btnCopyFastLed" title="Copy to clipboard">Copy</button>
+            <pre><code id="codeFastLed"></code></pre>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" id="btnDownloadFastLed">Download HexMatrix.h</button>
+          </div>
+        </div>
+
+        <!-- xLights Tab -->
+        <div class="tab-pane" id="tabXLights">
+          <div class="pane-instructions">
+            <span class="badge info">xLights Model</span>
+            <span>Import this custom model directly into xLights for synchronization with holiday light shows and music.</span>
+          </div>
+          <div class="code-container">
+            <button class="copy-code-btn" id="btnCopyXLights" title="Copy to clipboard">Copy</button>
+            <pre><code id="codeXLights"></code></pre>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" id="btnDownloadXLights">Download custom_hex.xmodel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blueprint Modal -->
+  <div class="modal-backdrop" id="blueprintModal" style="display:none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3>Physical Wiring & Assembly Blueprint</h3>
+          <p>Use this schematic during soldering and physical assembly of your hexagon panels.</p>
+        </div>
+        <button class="modal-close-btn" id="btnCloseBlueprintModal">&times;</button>
+      </div>
+      <div class="modal-body blueprint-body">
+        <div class="blueprint-preview-wrap">
+          <canvas id="blueprintCanvas" width="800" height="500"></canvas>
+        </div>
+        <div class="blueprint-guide">
+          <h4>Assembly Checklist:</h4>
+          <ul>
+            <li><strong>Data In (DI)</strong>: Starts at <strong>Hex #1, Vertex <span id="bpStartVertex">0</span></strong>.</li>
+            <li><strong>Data Out (DO) $\rightarrow$ Next Data In</strong>: Follow red interconnect arrows in numbered sequence.</li>
+            <li><strong>Common Ground</strong>: Connect GND of ESP32 directly to power supply GND.</li>
+            <li><strong>Power Injection</strong>: Red/Black pads on diagram indicate suggested 5V/GND injection nodes.</li>
+          </ul>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="btnPrintBlueprint">Print / Export PDF</button>
+          <button class="btn btn-primary" id="btnDownloadBlueprintPng">Download High-Res PNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

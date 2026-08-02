@@ -146,9 +146,129 @@ const AppState = {
 };
 
 // ==========================================================================
-// 3. Preset Layout Templates
+// 3. Preset Layout Templates & Phase-Based Hexagon Generators (1 LED = 1 Hex)
 // ==========================================================================
+const HexGenerator = {
+  // Generate a Hollow Hexagonal Ring of 1-LED hexagons
+  // S = LEDs per phase (e.g. 8). Radius R = S - 1.
+  // When cornerMode === 'shared', each of the 6 vertices is shared -> 6 * (S - 1) = 42 LEDs for S = 8.
+  generateRing(phaseLeds = 8, cornerMode = 'shared') {
+    const S = Math.max(2, parseInt(phaseLeds) || 8);
+    const R = S - 1;
+    const dirs = AppState.orientation === 'pointy' ? HexMath.POINTY_DIRECTIONS : HexMath.FLAT_DIRECTIONS;
+    const list = [];
+
+    // Start at corner vertex (dirs[4] * R)
+    let cur = { q: dirs[4].q * R, r: dirs[4].r * R };
+
+    for (let phase = 0; phase < 6; phase++) {
+      const moveDir = dirs[phase];
+      const count = cornerMode === 'shared' ? R : S;
+      for (let step = 0; step < count; step++) {
+        list.push({ q: cur.q, r: cur.r, phase: phase + 1, isCorner: step === 0 });
+        cur = { q: cur.q + moveDir.q, r: cur.r + moveDir.r };
+      }
+    }
+    return list;
+  },
+
+  // Generate a Solid Hexagonal Grid of side length S (radius R = S - 1)
+  // Outer perimeter has S LEDs per phase with 1 common corner LED.
+  generateSolid(phaseLeds = 8) {
+    const S = Math.max(2, parseInt(phaseLeds) || 8);
+    const R = S - 1;
+    const list = [];
+    for (let q = -R; q <= R; q++) {
+      const r1 = Math.max(-R, -q - R);
+      const r2 = Math.min(R, -q + R);
+      for (let r = r1; r <= r2; r++) {
+        list.push({ q, r });
+      }
+    }
+    return list;
+  },
+
+  // Generate Concentric Hexagon Rings (e.g. Outer Ring + Inner Ring)
+  generateNested(phaseLeds = 8, cornerMode = 'shared') {
+    const S = Math.max(2, parseInt(phaseLeds) || 8);
+    const list = [];
+    const dirs = AppState.orientation === 'pointy' ? HexMath.POINTY_DIRECTIONS : HexMath.FLAT_DIRECTIONS;
+    
+    // Outer ring (Radius S - 1)
+    const R1 = S - 1;
+    let cur1 = { q: dirs[4].q * R1, r: dirs[4].r * R1 };
+    for (let p = 0; p < 6; p++) {
+      const moveDir = dirs[p];
+      for (let s = 0; s < R1; s++) {
+        list.push({ q: cur1.q, r: cur1.r });
+        cur1 = { q: cur1.q + moveDir.q, r: cur1.r + moveDir.r };
+      }
+    }
+
+    // Inner ring (Radius Math.max(1, S - 2)) if S >= 3
+    if (S >= 3) {
+      const R2 = S - 2;
+      let cur2 = { q: dirs[4].q * R2, r: dirs[4].r * R2 };
+      for (let p = 0; p < 6; p++) {
+        const moveDir = dirs[p];
+        for (let s = 0; s < R2; s++) {
+          list.push({ q: cur2.q, r: cur2.r });
+          cur2 = { q: cur2.q + moveDir.q, r: cur2.r + moveDir.r };
+        }
+      }
+    }
+    return list;
+  },
+
+  // Auto-Wire coordinate list based on pattern
+  wireCoordinates(coords, wiringPattern = 'perimeter') {
+    if (wiringPattern === 'serpentine') {
+      // Sort by row (r), then alternate left-to-right (q asc) and right-to-left (q desc)
+      const rowsMap = new Map();
+      coords.forEach(c => {
+        if (!rowsMap.has(c.r)) rowsMap.set(c.r, []);
+        rowsMap.get(c.r).push(c);
+      });
+      const sortedRowKeys = Array.from(rowsMap.keys()).sort((a, b) => a - b);
+      const wired = [];
+      sortedRowKeys.forEach((rowKey, rowIdx) => {
+        const rowItems = rowsMap.get(rowKey);
+        if (rowIdx % 2 === 0) {
+          rowItems.sort((a, b) => a.q - b.q);
+        } else {
+          rowItems.sort((a, b) => b.q - a.q);
+        }
+        wired.push(...rowItems);
+      });
+      return wired;
+    } else if (wiringPattern === 'spiral') {
+      // Sort by distance from center descending
+      const sorted = [...coords].sort((a, b) => {
+        const dA = Math.max(Math.abs(a.q), Math.abs(a.r), Math.abs(-a.q - a.r));
+        const dB = Math.max(Math.abs(b.q), Math.abs(b.r), Math.abs(-b.q - b.r));
+        if (dA !== dB) return dB - dA;
+        return Math.atan2(a.r, a.q) - Math.atan2(b.r, b.q);
+      });
+      return sorted;
+    }
+    // Default perimeter / natural sequence
+    return [...coords];
+  }
+};
+
 const Templates = {
+  phaseRing8() {
+    return HexGenerator.generateRing(8, 'shared');
+  },
+  phaseRing5() {
+    return HexGenerator.generateRing(5, 'shared');
+  },
+  solidHex8() {
+    return HexGenerator.generateSolid(8);
+  },
+  solidHex5() {
+    return HexGenerator.generateSolid(5);
+  },
   single() {
     return [{ q: 0, r: 0 }];
   },
@@ -160,36 +280,10 @@ const Templates = {
     ];
   },
   flower19() {
-    const list = [{ q: 0, r: 0 }];
-    const dirs = HexMath.POINTY_DIRECTIONS;
-    // Ring 1
-    for (let i = 0; i < 6; i++) {
-      list.push({ q: dirs[i].q, r: dirs[i].r });
-    }
-    // Ring 2
-    for (let i = 0; i < 6; i++) {
-      let cur = { q: dirs[i].q * 2, r: dirs[i].r * 2 };
-      list.push(cur);
-      const nextDir = dirs[(i + 2) % 6];
-      list.push({ q: cur.q + nextDir.q, r: cur.r + nextDir.r });
-    }
-    return list;
+    return HexGenerator.generateSolid(3);
   },
   ring18() {
-    const list = [];
-    const dirs = HexMath.POINTY_DIRECTIONS;
-    // Ring 1
-    for (let i = 0; i < 6; i++) {
-      list.push({ q: dirs[i].q, r: dirs[i].r });
-    }
-    // Ring 2
-    for (let i = 0; i < 6; i++) {
-      let cur = { q: dirs[i].q * 2, r: dirs[i].r * 2 };
-      list.push(cur);
-      const nextDir = dirs[(i + 2) % 6];
-      list.push({ q: cur.q + nextDir.q, r: cur.r + nextDir.r });
-    }
-    return list;
+    return HexGenerator.generateNested(3);
   },
   pyramid10() {
     const list = [];
@@ -1265,6 +1359,102 @@ function updatePhaseDisplay() {
   }
 }
 
+function updateDenseGeneratorStats() {
+  const phaseInput = document.getElementById('densePhaseLeds');
+  const typeSelect = document.getElementById('denseStructureType');
+  const cornerSelect = document.getElementById('denseCornerMode');
+  const badgeVal = document.getElementById('valDenseTotalLeds');
+  const badgeFormula = document.getElementById('valDenseFormula');
+  
+  if (!phaseInput || !typeSelect || !cornerSelect || !badgeVal || !badgeFormula) return;
+
+  const N = Math.max(2, Math.min(30, parseInt(phaseInput.value) || 8));
+  const type = typeSelect.value;
+  const isShared = cornerSelect.value === 'shared';
+
+  let count = 0;
+  let desc = '';
+
+  if (type === 'solid') {
+    const R = N - 1;
+    count = 3 * R * R + 3 * R + 1;
+    desc = `Solid Honeycomb Matrix (Side ${N}) = ${count} Hexagons (1 LED each)`;
+  } else if (type === 'nested') {
+    const R1 = N - 1;
+    const R2 = Math.max(1, N - 2);
+    count = (6 * R1) + (N >= 3 ? 6 * R2 : 0);
+    desc = `Nested Rings (Outer ${N}/phase + Inner) = ${count} Hexagons (1 LED each)`;
+  } else {
+    count = isShared ? 6 * Math.max(1, N - 1) : 6 * N;
+    if (isShared) {
+      desc = `6 Phases × ${N} LEDs with 1 common corner LED = ${count} Hexagons (42 LEDs for N=8)`;
+    } else {
+      desc = `6 Phases × ${N} LEDs (discrete edges) = ${count} Hexagons (1 LED each)`;
+    }
+  }
+
+  badgeVal.textContent = `${count} LEDs`;
+  badgeFormula.textContent = desc;
+}
+
+function fitCameraToGrid() {
+  if (AppState.hexagons.length === 0) return;
+  AppState.camera.x = 0;
+  AppState.camera.y = 0;
+  
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  AppState.hexagons.forEach(h => {
+    const p = HexMath.axialToPixel(h.q, h.r, AppState.hexRadius, AppState.orientation);
+    minX = Math.min(minX, p.x - AppState.hexRadius);
+    maxX = Math.max(maxX, p.x + AppState.hexRadius);
+    minY = Math.min(minY, p.y - AppState.hexRadius);
+    maxY = Math.max(maxY, p.y + AppState.hexRadius);
+  });
+  
+  const spanX = Math.max(100, maxX - minX);
+  const spanY = Math.max(100, maxY - minY);
+  const availW = Math.max(300, (canvas.width / (window.devicePixelRatio || 1)) - 100);
+  const availH = Math.max(300, (canvas.height / (window.devicePixelRatio || 1)) - 100);
+  
+  const fitZoom = Math.min(2.0, Math.max(0.18, Math.min(availW / spanX, availH / spanY)));
+  AppState.camera.zoom = fitZoom;
+}
+
+function autoGenerateDenseHexagon() {
+  const phaseInput = document.getElementById('densePhaseLeds');
+  const typeSelect = document.getElementById('denseStructureType');
+  const cornerSelect = document.getElementById('denseCornerMode');
+  const wiringSelect = document.getElementById('denseWiringPattern');
+
+  const phaseLeds = Math.max(2, Math.min(30, parseInt(phaseInput ? phaseInput.value : 8) || 8));
+  const structureType = typeSelect ? typeSelect.value : 'ring';
+  const cornerMode = cornerSelect ? cornerSelect.value : 'shared';
+  const wiringPattern = wiringSelect ? wiringSelect.value : 'perimeter';
+
+  let rawCoords = [];
+  if (structureType === 'solid') {
+    rawCoords = HexGenerator.generateSolid(phaseLeds);
+  } else if (structureType === 'nested') {
+    rawCoords = HexGenerator.generateNested(phaseLeds, cornerMode);
+  } else {
+    rawCoords = HexGenerator.generateRing(phaseLeds, cornerMode);
+  }
+
+  const wiredCoords = HexGenerator.wireCoordinates(rawCoords, wiringPattern);
+  
+  AppState.displayMode = 'dense';
+  AppState.hexagons = wiredCoords.map((c, idx) => ({ id: idx + 1, q: c.q, r: c.r }));
+  AppState.wiringChain = AppState.hexagons.map(h => h.id);
+  AppState.selectedHexId = null;
+
+  fitCameraToGrid();
+  recomputeLeds();
+
+  const total = AppState.hexagons.length;
+  showToast(`⚡ Generated Hexagon Display with ${total} LEDs (${phaseLeds} LEDs/phase)! 🚀`);
+}
+
 function updateInspectorUI() {
   const hex = AppState.hexagons.find(h => h.id === AppState.selectedHexId);
   const emptyState = document.getElementById('inspectorEmptyState');
@@ -1404,6 +1594,7 @@ function setupUIBindings() {
       AppState.hexagons = hexCoords.map((c, idx) => ({ id: idx + 1, q: c.q, r: c.r }));
       AppState.wiringChain = AppState.hexagons.map(h => h.id);
       AppState.selectedHexId = null;
+      fitCameraToGrid();
       recomputeLeds();
       showToast(`Loaded Template: ${e.target.options[e.target.selectedIndex].text}`);
     }
@@ -1438,6 +1629,8 @@ function setupUIBindings() {
     AppState.displayMode = 'modular';
     document.getElementById('modeModularLabel').classList.add('active');
     document.getElementById('modeDenseLabel').classList.remove('active');
+    const denseSection = document.getElementById('denseGeneratorSection');
+    if (denseSection) denseSection.style.display = 'none';
     document.getElementById('perimeterSettingsSection').style.display = 'block';
     updatePhaseDisplay();
     recomputeLeds();
@@ -1446,11 +1639,48 @@ function setupUIBindings() {
     AppState.displayMode = 'dense';
     document.getElementById('modeDenseLabel').classList.add('active');
     document.getElementById('modeModularLabel').classList.remove('active');
+    const denseSection = document.getElementById('denseGeneratorSection');
+    if (denseSection) denseSection.style.display = 'block';
     document.getElementById('perimeterSettingsSection').style.display = 'none';
+    updateDenseGeneratorStats();
     recomputeLeds();
   });
 
-  // Phase LED Inputs
+  // Dense Mode Hexagon Auto-Generator Bindings (1 LED = 1 Hexagon)
+  const densePhaseInput = document.getElementById('densePhaseLeds');
+  if (densePhaseInput) {
+    document.getElementById('btnIncDensePhase').addEventListener('click', () => {
+      densePhaseInput.value = Math.min(30, (parseInt(densePhaseInput.value) || 8) + 1);
+      updateDenseGeneratorStats();
+    });
+    document.getElementById('btnDecDensePhase').addEventListener('click', () => {
+      densePhaseInput.value = Math.max(2, (parseInt(densePhaseInput.value) || 8) - 1);
+      updateDenseGeneratorStats();
+    });
+    densePhaseInput.addEventListener('change', () => {
+      densePhaseInput.value = Math.max(2, Math.min(30, parseInt(densePhaseInput.value) || 8));
+      updateDenseGeneratorStats();
+    });
+  }
+
+  const denseStructureType = document.getElementById('denseStructureType');
+  if (denseStructureType) {
+    denseStructureType.addEventListener('change', () => updateDenseGeneratorStats());
+  }
+
+  const denseCornerMode = document.getElementById('denseCornerMode');
+  if (denseCornerMode) {
+    denseCornerMode.addEventListener('change', () => updateDenseGeneratorStats());
+  }
+
+  const btnAutoGenerateHex = document.getElementById('btnAutoGenerateHex');
+  if (btnAutoGenerateHex) {
+    btnAutoGenerateHex.addEventListener('click', () => {
+      autoGenerateDenseHexagon();
+    });
+  }
+
+  // Phase LED Inputs (Modular Mode)
   const phaseInput = document.getElementById('ledsPerPhase');
   if (phaseInput) {
     document.getElementById('btnIncPhase').addEventListener('click', () => {
@@ -1472,7 +1702,7 @@ function setupUIBindings() {
     });
   }
 
-  // Corner Sharing Select
+  // Corner Sharing Select (Modular Mode)
   const cornerSelect = document.getElementById('cornerSharingSelect');
   if (cornerSelect) {
     cornerSelect.addEventListener('change', (e) => {

@@ -37,13 +37,21 @@
         <label for="templateSelect" class="sr-only">Layout Template</label>
         <select id="templateSelect" class="btn-select">
           <option value="" disabled selected>✨ Load Template...</option>
-          <option value="single">Single Hex (1)</option>
-          <option value="flower7">7-Hex Flower Cluster</option>
-          <option value="flower19">19-Hex Mega Honeycomb</option>
-          <option value="ring18">18-Hex Concentric Rings</option>
-          <option value="pyramid10">10-Hex Triangle Pyramid</option>
-          <option value="diamond9">9-Hex Diamond Array</option>
-          <option value="snake7">7-Hex Serpentine Line</option>
+          <optgroup label="⚡ Phase-Based Auto-Generators (1 LED = 1 Hex)">
+            <option value="phaseRing8">Hexagon Ring (8 LEDs/Phase — 42 LEDs)</option>
+            <option value="phaseRing5">Hexagon Ring (5 LEDs/Phase — 24 LEDs)</option>
+            <option value="solidHex8">Solid Hexagon Grid (Side 8 — 169 LEDs)</option>
+            <option value="solidHex5">Solid Hexagon Grid (Side 5 — 61 LEDs)</option>
+          </optgroup>
+          <optgroup label="🔷 Honeycomb Matrix Presets">
+            <option value="flower7">7-Hex Flower Cluster (Side 2)</option>
+            <option value="flower19">19-Hex Mega Honeycomb (Side 3)</option>
+            <option value="ring18">18-Hex Concentric Rings</option>
+            <option value="single">Single Hex (1)</option>
+            <option value="pyramid10">10-Hex Triangle Pyramid</option>
+            <option value="diamond9">9-Hex Diamond Array</option>
+            <option value="snake7">7-Hex Serpentine Line</option>
+          </optgroup>
         </select>
       </div>
 
@@ -130,6 +138,66 @@
             </div>
           </label>
         </div>
+      </section>
+
+      <!-- Hexagon Structure Auto-Generator (1 LED = 1 Hexagon) -->
+      <section class="panel-section" id="denseGeneratorSection">
+        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>⚡ Auto-Generate Hexagon</span>
+          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); font-weight: 700;">1 LED = 1 Hex</span>
+        </div>
+
+        <div class="form-row">
+          <label for="densePhaseLeds">LEDs / Hexagons per Phase</label>
+          <div class="number-input-group">
+            <button class="num-btn" id="btnDecDensePhase">-</button>
+            <input type="number" id="densePhaseLeds" min="2" max="30" value="8">
+            <button class="num-btn" id="btnIncDensePhase">+</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="denseStructureType">Structure Pattern</label>
+          <select id="denseStructureType" class="btn-select full-width">
+            <option value="ring" selected>Hollow Hexagon Ring (6 Phases with 1 Common Corner)</option>
+            <option value="solid">Solid Hexagon Grid (Filled Honeycomb Matrix)</option>
+            <option value="nested">Double Concentric Rings (Outer + Inner)</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="denseCornerMode">Corner Sharing</label>
+          <select id="denseCornerMode" class="btn-select full-width">
+            <option value="shared" selected>1 Common Corner LED per Vertex</option>
+            <option value="discrete">No Sharing (Discrete Strips)</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="denseWiringPattern">Auto-Wiring Order</label>
+          <select id="denseWiringPattern" class="btn-select full-width">
+            <option value="perimeter" selected>Perimeter Phase Order (Corner 0 → Corner 5)</option>
+            <option value="serpentine">Serpentine (S-Curve Zigzag Rows)</option>
+            <option value="spiral">Spiral Inward (Ring by Ring)</option>
+          </select>
+        </div>
+
+        <div class="stat-badge-row">
+          <div class="stat-badge full-width" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; width: 100%;">
+              <span class="badge-label">Generated LEDs:</span>
+              <span class="badge-val cyan" id="valDenseTotalLeds">42 LEDs</span>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted);" id="valDenseFormula">
+              6 Phases × 8 LEDs with 1 common corner LED = 42 Hexagons (42 LEDs)
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary glow-btn full-width" id="btnAutoGenerateHex" style="margin-top: 8px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <span>⚡ Auto-Generate Hexagon</span>
+        </button>
       </section>
 
       <!-- Phase & Perimeter LED Geometry Settings -->

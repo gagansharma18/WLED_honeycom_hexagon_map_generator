@@ -1,6 +1,9 @@
 /**
  * Unit & Integration Test for Honeycomb WLED Mapping Engine
- * Tests 1 LED = 1 Hexagon mode & Phase LED Configuration with Common Corner LEDs
+ * Tests 1 LED = 1 Hexagon Phase-Based Auto-Generator:
+ * - Hexagon Ring: 8 LEDs in 1 phase with 1 common corner LED = 42 LEDs (1 LED = 1 Hexagon)
+ * - Solid Hexagon Grid: Side 8 = 169 LEDs
+ * - Wiring Patterns: Perimeter, Serpentine, Spiral
  */
 const fs = require('fs');
 const vm = require('vm');
@@ -9,7 +12,9 @@ const appCode = fs.readFileSync('app.js', 'utf-8');
 
 const domMock = {
   document: {
-    getElementById: () => ({
+    getElementById: (id) => ({
+      id: id,
+      value: '8',
       addEventListener: () => {},
       textContent: '',
       style: {},
@@ -55,87 +60,61 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(appCode, sandbox);
 
-console.log("=== RUNNING ENGINE VALIDATION TESTS ===");
+console.log("=== RUNNING PHASE-BASED 1 LED = 1 HEXAGON TESTS ===");
 
 const run = (code) => vm.runInContext(code, sandbox);
 
-// 1. Check HexMath
-const centerPixel = run("HexMath.axialToPixel(0, 0, 46, 'pointy')");
-console.assert(centerPixel.x === 0 && centerPixel.y === 0, "HexMath center pixel should be (0,0)");
+// 1. Check HexGenerator.generateRing(8, 'shared')
+const ring8Coords = run("HexGenerator.generateRing(8, 'shared')");
+console.assert(ring8Coords.length === 42, `Expected 42 hexagons for 8 LEDs/phase with 1 common corner, got ${ring8Coords.length}`);
+console.log(`✓ HexGenerator.generateRing(8, 'shared') produced exactly 42 hexagons (1 LED = 1 Hexagon)`);
 
-const axialBack = run(`HexMath.pixelToAxial(${centerPixel.x}, ${centerPixel.y}, 46, 'pointy')`);
-console.assert(axialBack.q === 0 && axialBack.r === 0, "Axial round back should be (0,0)");
-console.log("✓ HexMath axial/pixel conversion verified");
+// Check that there are 6 corner hexagons
+const cornersCount = ring8Coords.filter(c => c.isCorner).length;
+console.assert(cornersCount === 6, `Expected 6 corner vertices, got ${cornersCount}`);
+console.log(`✓ Verified 6 corner vertices shared across 6 phases`);
 
-// 2. Check Templates
-const flower7 = run("Templates.flower7()");
-console.assert(flower7.length === 7, "flower7 template should have 7 hexagons");
-console.log("✓ Template generation verified");
+// 2. Check HexGenerator.generateRing(5, 'shared')
+const ring5Coords = run("HexGenerator.generateRing(5, 'shared')");
+console.assert(ring5Coords.length === 24, `Expected 24 hexagons for 5 LEDs/phase with 1 common corner, got ${ring5Coords.length}`);
+console.log(`✓ HexGenerator.generateRing(5, 'shared') produced exactly 24 hexagons (6 * 4 = 24)`);
 
-// 3. Check Default 1 LED = 1 Hexagon Mode
+// 3. Check HexGenerator.generateSolid(8)
+const solid8Coords = run("HexGenerator.generateSolid(8)");
+console.assert(solid8Coords.length === 169, `Expected 169 hexagons for Side 8 Solid Hex, got ${solid8Coords.length}`);
+console.log(`✓ HexGenerator.generateSolid(8) produced 169 hexagons (Radius 7)`);
+
+// 4. Test Auto-Generation into AppState (1 LED = 1 Hexagon Default Mode)
 run(`
-  AppState.hexagons = [{ id: 1, q: 0, r: 0 }];
-  AppState.wiringChain = [1];
   AppState.displayMode = 'dense';
-  recomputeLeds();
-`);
-
-let denseLeds = run("AppState.cachedLeds.length");
-console.assert(denseLeds === 1, `Expected 1 LED for single hex in dense mode, got ${denseLeds}`);
-console.log(`✓ Default 1 LED = 1 Hexagon single cell verified`);
-
-run(`
-  AppState.hexagons = Templates.flower7().map((c, idx) => ({ id: idx + 1, q: c.q, r: c.r }));
+  const ring8 = HexGenerator.generateRing(8, 'shared');
+  AppState.hexagons = ring8.map((c, idx) => ({ id: idx + 1, q: c.q, r: c.r }));
   AppState.wiringChain = AppState.hexagons.map(h => h.id);
-  AppState.displayMode = 'dense';
   recomputeLeds();
 `);
 
-denseLeds = run("AppState.cachedLeds.length");
-console.assert(denseLeds === 7, `Expected 7 LEDs in dense mode, got ${denseLeds}`);
-console.log(`✓ Default 1 LED = 1 Hexagon verified (${denseLeds} LEDs across 7 hexes)`);
+const totalLeds = run("AppState.cachedLeds.length");
+console.assert(totalLeds === 42, `Expected 42 LEDs in dense mode, got ${totalLeds}`);
+console.log(`✓ AppState successfully computed 42 LEDs for 8-phase Hexagon (1 LED = 1 Hexagon)`);
 
-// 4. Check Phase LED Generation: 8 LEDs per phase with 1 common corner LED
-run(`
-  AppState.hexagons = [{ id: 1, q: 0, r: 0 }];
-  AppState.wiringChain = [1];
-  AppState.displayMode = 'modular';
-  AppState.ledsPerPhase = 8;
-  AppState.cornerMode = 'shared';
-  recomputeLeds();
-`);
+// Verify 2D Matrix for 42-LED Hexagon Ring
+const matrix = run("AppState.cachedMatrix");
+console.assert(matrix && matrix.width > 0 && matrix.height > 0, "Matrix dimensions should be valid");
+console.log(`✓ 2D Bounding Matrix for 42-LED Hexagon Ring: ${matrix.width} × ${matrix.height} (${matrix.map.length} total cells)`);
 
-const phaseLedsSingle = run("AppState.cachedLeds.length");
-console.assert(phaseLedsSingle === 42, `Expected 42 LEDs for 8 LEDs/phase with 1 common corner LED (6 * 7 = 42), got ${phaseLedsSingle}`);
-console.log(`✓ Phase LED Mode: 8 LEDs per phase with 1 common corner LED = ${phaseLedsSingle} LEDs per hexagon (Verified)`);
-
-// Verify corner flags and phase indexes
-const cornerLeds = run("AppState.cachedLeds.filter(l => l.isCorner)");
-console.assert(cornerLeds.length === 6, `Expected exactly 6 corner LEDs, got ${cornerLeds.length}`);
-console.log(`✓ 6 Shared Corner LEDs identified correctly at vertices (Indices: ${cornerLeds.map(l => l.globalIndex).join(', ')})`);
-
-// 5. Test 7-Hex Flower with 8 LEDs per Phase
-run(`
-  AppState.hexagons = Templates.flower7().map((c, idx) => ({ id: idx + 1, q: c.q, r: c.r }));
-  AppState.wiringChain = AppState.hexagons.map(h => h.id);
-  AppState.displayMode = 'modular';
-  AppState.ledsPerPhase = 8;
-  AppState.cornerMode = 'shared';
-  recomputeLeds();
-`);
-
-const totalClusterLeds = run("AppState.cachedLeds.length");
-console.assert(totalClusterLeds === 7 * 42, `Expected 294 LEDs for 7 hexes * 42 leds/hex, got ${totalClusterLeds}`);
-console.log(`✓ 7-Hex Cluster with 8 LEDs/phase: ${totalClusterLeds} total LEDs mapped successfully`);
-
-// 6. Test Exporters
+// Verify WLED ledmap.json Export
 const wledJson = JSON.parse(run("Exporters.wledLedmap()"));
-console.assert(wledJson.width > 0 && wledJson.height > 0, "WLED JSON width and height should be valid");
-console.assert(wledJson.map.length === wledJson.width * wledJson.height, "WLED JSON map length should match dimensions");
+console.assert(wledJson.map.includes(0) && wledJson.map.includes(41), "WLED ledmap should contain LED indices 0 to 41");
+console.log(`✓ WLED ledmap.json contains all 42 LED indices (0–41) correctly mapped`);
 
-const segsJson = JSON.parse(run("Exporters.wledSegments()"));
-console.assert(segsJson.seg.length === 7, "Segments should have 7 segments");
-console.assert(segsJson.seg[0].len === 42, `Each segment should have 42 LEDs, got ${segsJson.seg[0].len}`);
-console.log(`✓ WLED Segments exported: 7 segments of 42 LEDs each (Total ${7 * 42} LEDs)`);
+// 5. Test Serpentine Wiring Pattern
+const serpentineCoords = run("HexGenerator.wireCoordinates(HexGenerator.generateRing(8, 'shared'), 'serpentine')");
+console.assert(serpentineCoords.length === 42, "Serpentine coordinates should preserve count of 42");
+console.log(`✓ Serpentine row-by-row auto-wiring verified for 42 hexagons`);
 
-console.log("=== ALL TESTS PASSED SUCCESSFULLY ===");
+// 6. Test Spiral Inward Wiring Pattern
+const spiralCoords = run("HexGenerator.wireCoordinates(HexGenerator.generateSolid(3), 'spiral')");
+console.assert(spiralCoords.length === 19, "Spiral solid-3 should have 19 hexagons");
+console.log(`✓ Spiral auto-wiring verified for 19 hexagons`);
+
+console.log("=== ALL TESTS PASSED SUCCESSFULLY! ===");

@@ -98,7 +98,7 @@ const HexMath = {
 // ==========================================================================
 const AppState = {
   orientation: 'pointy', // 'pointy' | 'flat'
-  displayMode: 'modular', // 'modular' (perimeter) | 'dense' (1 LED per hex)
+  displayMode: 'dense', // 'dense' (1 LED = 1 Hexagon pixel default) | 'modular' (perimeter)
   hexRadius: 46,
   ledsPerEdge: 3,
   defaultStartCorner: 0,
@@ -305,19 +305,59 @@ function compute2DMatrix() {
   // Determine matrix grid resolution
   let cols, rows;
   if (AppState.displayMode === 'dense') {
-    // Dense hex grid
-    const qVals = AppState.hexagons.map(h => h.q);
-    const rVals = AppState.hexagons.map(h => h.r);
-    const minQ = Math.min(...qVals), maxQ = Math.max(...qVals);
-    const minR = Math.min(...rVals), maxR = Math.max(...rVals);
-    cols = Math.max(1, (maxQ - minQ) * 2 + 3);
-    rows = Math.max(1, (maxR - minR) * 2 + 3);
-  } else {
-    // Modular Perimeter: scale based on LEDs per edge and span
-    const ledSpacing = (AppState.hexRadius * 2 * Math.PI) / (6 * AppState.ledsPerEdge);
-    cols = Math.max(2, Math.round(spanX / ledSpacing) + 2);
-    rows = Math.max(2, Math.round(spanY / ledSpacing) + 2);
+    // 1 LED = 1 Hexagon Pixel: Direct Hexagonal Offset Grid Mapping
+    const hexes = AppState.hexagons;
+    const isPointy = AppState.orientation === 'pointy';
+
+    const offsetCoords = hexes.map(h => ({
+      id: h.id,
+      gx: isPointy ? (h.q + Math.floor(h.r / 2)) : h.q,
+      gy: isPointy ? h.r : (h.r + Math.floor(h.q / 2))
+    }));
+
+    const minGX = Math.min(...offsetCoords.map(o => o.gx));
+    const maxGX = Math.max(...offsetCoords.map(o => o.gx));
+    const minGY = Math.min(...offsetCoords.map(o => o.gy));
+    const maxGY = Math.max(...offsetCoords.map(o => o.gy));
+
+    cols = Math.max(1, maxGX - minGX + 1);
+    rows = Math.max(1, maxGY - minGY + 1);
+
+    const grid = Array.from({ length: rows }, () => Array(cols).fill(-1));
+    leds.forEach(led => {
+      const coord = offsetCoords.find(o => o.id === led.hexId);
+      if (coord) {
+        const gx = coord.gx - minGX;
+        const gy = coord.gy - minGY;
+        grid[gy][gx] = led.globalIndex;
+        led.gx = gx;
+        led.gy = gy;
+      }
+    });
+
+    const flatMap = [];
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        flatMap.push(grid[y][x]);
+      }
+    }
+
+    AppState.cachedMatrix = {
+      width: cols,
+      height: rows,
+      grid: grid,
+      map: flatMap,
+      bounds: { minX, maxX, minY, maxY, spanX, spanY }
+    };
+
+    renderMiniMatrix();
+    return;
   }
+
+  // Modular Perimeter: scale based on LEDs per edge and span
+  const ledSpacing = (AppState.hexRadius * 2 * Math.PI) / (6 * AppState.ledsPerEdge);
+  cols = Math.max(2, Math.round(spanX / ledSpacing) + 2);
+  rows = Math.max(2, Math.round(spanY / ledSpacing) + 2);
 
   // Ensure reasonable bounds
   cols = Math.min(128, Math.max(3, cols));
@@ -681,18 +721,18 @@ function drawGuideGrid(ctx) {
 
 function drawHexagons(ctx) {
   const R = AppState.hexRadius;
-  const hexMap = new Map();
-  AppState.hexagons.forEach(h => hexMap.set(h.id, h));
+  const isDense = AppState.displayMode === 'dense';
 
   AppState.hexagons.forEach(hex => {
     const center = HexMath.axialToPixel(hex.q, hex.r, R, AppState.orientation);
     const corners = HexMath.getHexCorners(center.x, center.y, R, AppState.orientation);
     const isSelected = hex.id === AppState.selectedHexId;
     const chainIdx = AppState.wiringChain.indexOf(hex.id);
+    const led = isDense ? AppState.cachedLeds.find(l => l.hexId === hex.id) : null;
 
     ctx.save();
 
-    // Module Fill
+    // Module Outer Polygon
     ctx.beginPath();
     corners.forEach((c, idx) => {
       if (idx === 0) ctx.moveTo(c.x, c.y);
@@ -700,43 +740,67 @@ function drawHexagons(ctx) {
     });
     ctx.closePath();
 
-    ctx.fillStyle = isSelected ? 'rgba(0, 242, 254, 0.12)' : 'rgba(17, 24, 39, 0.7)';
+    if (isDense && led) {
+      // 1 LED = 1 Hexagon: Glowing Pixel Tile
+      const fillGrad = ctx.createRadialGradient(center.x, center.y, 2, center.x, center.y, R * 0.95);
+      fillGrad.addColorStop(0, `rgba(${led.r}, ${led.g}, ${led.b}, 0.85)`);
+      fillGrad.addColorStop(0.7, `rgba(${led.r}, ${led.g}, ${led.b}, 0.55)`);
+      fillGrad.addColorStop(1, `rgba(${Math.round(led.r * 0.25)}, ${Math.round(led.g * 0.25)}, ${Math.round(led.b * 0.25)}, 0.35)`);
+      ctx.fillStyle = fillGrad;
+    } else {
+      ctx.fillStyle = isSelected ? 'rgba(0, 242, 254, 0.12)' : 'rgba(17, 24, 39, 0.7)';
+    }
     ctx.fill();
 
-    // Module Border
-    ctx.strokeStyle = isSelected ? '#00f2fe' : 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = isSelected ? 2.5 : 1.2;
-    if (isSelected) {
-      ctx.shadowColor = 'rgba(0, 242, 254, 0.6)';
-      ctx.shadowBlur = 12;
+    // Module Border & Glow
+    if (isDense && led) {
+      ctx.strokeStyle = isSelected ? '#00f2fe' : `rgba(${led.r}, ${led.g}, ${led.b}, 0.85)`;
+      ctx.lineWidth = isSelected ? 2.5 : 1.5;
+      ctx.shadowColor = isSelected ? 'rgba(0, 242, 254, 0.8)' : `rgba(${led.r}, ${led.g}, ${led.b}, 0.6)`;
+      ctx.shadowBlur = isSelected ? 16 : 8;
+    } else {
+      ctx.strokeStyle = isSelected ? '#00f2fe' : 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = isSelected ? 2.5 : 1.2;
+      if (isSelected) {
+        ctx.shadowColor = 'rgba(0, 242, 254, 0.6)';
+        ctx.shadowBlur = 12;
+      }
     }
     ctx.stroke();
 
-    // Hexagon ID Badge & Coordinates
-    ctx.fillStyle = isSelected ? '#00f2fe' : 'rgba(255, 255, 255, 0.8)';
-    ctx.font = '600 11px Inter, sans-serif';
+    // Hexagon ID Badge & Text Labeling
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 11px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     const label = chainIdx !== -1 ? `#${chainIdx + 1}` : `H${hex.id}`;
-    ctx.fillText(label, center.x, center.y - (AppState.showCoords ? 6 : 0));
+    ctx.fillText(label, center.x, center.y - (AppState.showCoords ? 6 : (isDense ? 8 : 0)));
 
-    if (AppState.showCoords) {
+    if (isDense && led) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.font = '600 9px JetBrains Mono, monospace';
+      ctx.fillText(`LED ${led.globalIndex}`, center.x, center.y + 8);
+    } else if (AppState.showCoords) {
       ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
       ctx.font = '400 9px JetBrains Mono, monospace';
       ctx.fillText(`(${hex.q},${hex.r})`, center.x, center.y + 7);
     }
 
-    // Start Vertex Marker Indicator
-    const startCorner = hex.startCornerOverride !== undefined ? hex.startCornerOverride : AppState.defaultStartCorner;
-    const startPt = corners[startCorner];
-    ctx.beginPath();
-    ctx.arc(startPt.x, startPt.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#10b981';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    // Start Vertex Marker Indicator (Perimeter mode only)
+    if (!isDense) {
+      const startCorner = hex.startCornerOverride !== undefined ? hex.startCornerOverride : AppState.defaultStartCorner;
+      const startPt = corners[startCorner];
+      ctx.beginPath();
+      ctx.arc(startPt.x, startPt.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#10b981';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
 
     ctx.restore();
   });
@@ -770,8 +834,26 @@ function drawWiringLines(ctx) {
 
 function drawLeds(ctx) {
   ctx.save();
-  const ledRadius = AppState.displayMode === 'dense' ? 6 : 3.5;
+  const isDense = AppState.displayMode === 'dense';
 
+  if (isDense) {
+    // In dense mode, the hexagon bodies glow with the LED color; draw center core diodes
+    AppState.cachedLeds.forEach(led => {
+      ctx.beginPath();
+      ctx.arc(led.x, led.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgb(${led.r}, ${led.g}, ${led.b})`;
+      ctx.shadowColor = `rgba(${led.r}, ${led.g}, ${led.b}, 0.8)`;
+      ctx.shadowBlur = 6;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+    ctx.restore();
+    return;
+  }
+
+  const ledRadius = 3.5;
   AppState.cachedLeds.forEach(led => {
     // Glow Halo
     ctx.beginPath();

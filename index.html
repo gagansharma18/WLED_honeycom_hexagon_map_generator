@@ -115,25 +115,25 @@
       <section class="panel-section">
         <div class="section-title">Display Mode</div>
         <div class="radio-card-group">
-          <label class="radio-card active" id="modeModularLabel">
-            <input type="radio" name="displayMode" value="modular" checked id="modeModular">
+          <label class="radio-card active" id="modeDenseLabel">
+            <input type="radio" name="displayMode" value="dense" checked id="modeDense">
             <div class="card-content">
-              <span class="card-title">Perimeter Panels</span>
-              <span class="card-desc">LEDs along outer hex edges (Nanoleaf / 3D modules)</span>
+              <span class="card-title">1 LED = 1 Hexagon Pixel (Default)</span>
+              <span class="card-desc">Each hexagon is 1 discrete pixel (Honeycomb LED Matrix)</span>
             </div>
           </label>
-          <label class="radio-card" id="modeDenseLabel">
-            <input type="radio" name="displayMode" value="dense" id="modeDense">
+          <label class="radio-card" id="modeModularLabel">
+            <input type="radio" name="displayMode" value="modular" id="modeModular">
             <div class="card-content">
-              <span class="card-title">Dense Hex Matrix</span>
-              <span class="card-desc">1 LED per hexagon center (Honeycomb pixel array)</span>
+              <span class="card-title">Perimeter Panels</span>
+              <span class="card-desc">LEDs along outer hex edges (Nanoleaf / 3D strip modules)</span>
             </div>
           </label>
         </div>
       </section>
 
       <!-- Modular LED Geometry Settings -->
-      <section class="panel-section" id="perimeterSettingsSection">
+      <section class="panel-section" id="perimeterSettingsSection" style="display: none;">
         <div class="section-title">Perimeter LED Configuration</div>
         <div class="form-row">
           <label for="ledsPerEdge">LEDs per Edge</label>

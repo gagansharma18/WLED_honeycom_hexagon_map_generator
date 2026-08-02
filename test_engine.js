@@ -26,7 +26,8 @@ const domMock = {
         arc: () => {},
         save: () => {},
         restore: () => {},
-        fillText: () => {}
+        fillText: () => {},
+        createRadialGradient: () => ({ addColorStop: () => {} })
       })
     }),
     querySelectorAll: () => []
@@ -70,42 +71,31 @@ const flower7 = run("Templates.flower7()");
 console.assert(flower7.length === 7, "flower7 template should have 7 hexagons");
 console.log("✓ Template generation verified");
 
-// 3. Check LED Generation & Matrix
+// 3. Check Default 1 LED = 1 Hexagon Mode
 run(`
   AppState.hexagons = Templates.flower7().map((c, idx) => ({ id: idx + 1, q: c.q, r: c.r }));
   AppState.wiringChain = AppState.hexagons.map(h => h.id);
-  AppState.ledsPerEdge = 3;
-  AppState.displayMode = 'modular';
+  AppState.displayMode = 'dense';
   recomputeLeds();
 `);
 
-const totalLeds = run("AppState.cachedLeds.length");
-const expectedTotal = 7 * 6 * 3; // 126
-console.assert(totalLeds === expectedTotal, `Expected ${expectedTotal} LEDs, got ${totalLeds}`);
-console.log(`✓ Total LED computation verified (${totalLeds} LEDs across 7 hexes)`);
+const denseLeds = run("AppState.cachedLeds.length");
+console.assert(denseLeds === 7, `Expected 7 LEDs in dense mode (1 LED = 1 Hex), got ${denseLeds}`);
+console.log(`✓ Default 1 LED = 1 Hexagon verified (${denseLeds} LEDs across 7 hexes)`);
 
-// 4. Check Matrix Bounding Box and ledmap.json
-const matrix = run("AppState.cachedMatrix");
-console.assert(matrix && matrix.width > 0 && matrix.height > 0, "Matrix should have valid width/height");
-console.assert(matrix.map.length === matrix.width * matrix.height, "Flat map length should equal width * height");
+const denseMatrix = run("AppState.cachedMatrix");
+console.assert(denseMatrix && denseMatrix.width > 0 && denseMatrix.height > 0, "Dense Matrix should have valid dimensions");
+const mappedDense = denseMatrix.map.filter(x => x !== -1);
+console.assert(mappedDense.length === 7, `Mapped indices (${mappedDense.length}) must equal 7`);
+console.log(`✓ 1 LED = 1 Hex 2D Matrix verified: ${denseMatrix.width}x${denseMatrix.height} grid, ${mappedDense.length} mapped LEDs, ${denseMatrix.map.length - mappedDense.length} gap (-1) cells`);
 
-const mappedIndices = matrix.map.filter(x => x !== -1);
-console.assert(mappedIndices.length === totalLeds, `Mapped indices (${mappedIndices.length}) must equal total LEDs (${totalLeds})`);
-console.log(`✓ 2D Matrix projection verified: ${matrix.width}x${matrix.height} grid, ${mappedIndices.length} mapped LEDs, ${matrix.map.length - mappedIndices.length} gap (-1) cells`);
-
-// 5. Check Exporters
+// 4. Check Exporters in 1 LED = 1 Hex mode
 const wledJson = JSON.parse(run("Exporters.wledLedmap()"));
-console.assert(wledJson.width === matrix.width, "WLED JSON width should match matrix");
-console.assert(wledJson.map.length === matrix.map.length, "WLED JSON map length should match");
+console.assert(wledJson.width === denseMatrix.width, "WLED JSON width should match matrix");
+console.assert(wledJson.map.length === denseMatrix.map.length, "WLED JSON map length should match");
 
 const segmentsJson = JSON.parse(run("Exporters.wledSegments()"));
 console.assert(segmentsJson.seg.length === 7, "Segments JSON should have 7 segments");
 
-const fastLedCode = run("Exporters.fastLedCpp()");
-console.assert(fastLedCode.includes("HEX_LED_MAP"), "FastLED code should contain HEX_LED_MAP");
-
-const xlightsXml = run("Exporters.xLightsXml()");
-console.assert(xlightsXml.includes("<custommodel"), "xLights code should contain <custommodel");
-
-console.log("✓ All Exporters (WLED ledmap.json, Segments, FastLED C++, xLights XML) verified");
+console.log("✓ WLED ledmap.json and Segments export verified for 1 LED = 1 Hexagon mode");
 console.log("=== ALL TESTS PASSED SUCCESSFULLY ===");

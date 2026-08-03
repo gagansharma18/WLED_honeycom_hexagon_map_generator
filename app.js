@@ -2269,10 +2269,53 @@ function setupUIBindings() {
     });
   }
 
+function sendWledHardwareTestColor(r, g, b) {
+  const ipInput = document.getElementById('wledIpAddress');
+  const ip = ipInput ? ipInput.value.trim() : '10.130.79.95';
+  if (!ip) {
+    showToast('Enter WLED IP Address first', 'error');
+    return;
+  }
+  AppState.wledHardware.ip = ip;
+  showToast(`Sending test color (${r},${g},${b}) to http://${ip}...`);
+
+  const isOn = (r > 0 || g > 0 || b > 0);
+  const bri = isOn ? 255 : 0;
+
+  // Dual Ping: HTTP GET /win API (CORS bypass) + HTTP POST JSON API
+  const img = new Image();
+  img.src = `http://${ip}/win&A=${bri}&FX=0&R=${r}&G=${g}&B=${b}&t=${Date.now()}`;
+
+  try {
+    fetch(`http://${ip}/json/state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        on: isOn,
+        bri: bri,
+        seg: [{ id: 0, start: 0, stop: Math.max(1, AppState.cachedLeds.length), on: isOn, bri: bri, fx: 0, col: [[r, g, b]] }]
+      }),
+      mode: 'no-cors'
+    });
+    setWledStatus(true, isOn ? `Test (${r},${g},${b})` : 'Power OFF');
+  } catch (e) {}
+}
+
   const btnPushLedmap = document.getElementById('btnDirectPushLedmap');
   if (btnPushLedmap) {
     btnPushLedmap.addEventListener('click', directPushLedmapToWled);
   }
+
+  // Diagnostic Test Color Buttons
+  const bindDiag = (id, r, g, b) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', () => sendWledHardwareTestColor(r, g, b));
+  };
+  bindDiag('btnTestWhite', 255, 255, 255);
+  bindDiag('btnTestRed', 255, 0, 0);
+  bindDiag('btnTestGreen', 0, 255, 0);
+  bindDiag('btnTestBlue', 0, 0, 255);
+  bindDiag('btnTestOff', 0, 0, 0);
 
   // Export Modal & Tabs
   const exportModal = document.getElementById('exportModal');

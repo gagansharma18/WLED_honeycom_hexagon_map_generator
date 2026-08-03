@@ -1287,6 +1287,38 @@ const Exporters = {
     return JSON.stringify(obj, null, 2);
   },
 
+  wledPresetPlasma() {
+    const totalLeds = AppState.cachedLeds.length;
+    const preset = {
+      on: true,
+      bri: 200,
+      transition: 7,
+      mainseg: 0,
+      seg: [
+        {
+          id: 0,
+          start: 0,
+          stop: totalLeds,
+          grp: 1,
+          spc: 0,
+          of: 0,
+          on: true,
+          bri: 255,
+          fx: 82, // WLED 2D Plasma Effect ID
+          sx: 128, // Effect Speed
+          ix: 160, // Effect Scale/Intensity
+          pal: 35, // Cyberpunk Palette
+          col: [
+            [0, 242, 254],  // Color 1: Neon Cyan
+            [247, 37, 133], // Color 2: Neon Magenta
+            [0, 0, 0]
+          ]
+        }
+      ]
+    };
+    return JSON.stringify(preset, null, 2);
+  },
+
   wledSegments() {
     const hexMap = new Map();
     AppState.hexagons.forEach(h => hexMap.set(h.id, h));
@@ -2060,6 +2092,7 @@ function setupUIBindings() {
     });
   };
   setupCopy('btnCopyWledMap', 'codeWledMap');
+  setupCopy('btnCopyWledPlasma', 'codeWledPlasma');
   setupCopy('btnCopySegments', 'codeWledSegments');
   setupCopy('btnCopyFastLed', 'codeFastLed');
   setupCopy('btnCopyXLights', 'codeXLights');
@@ -2078,6 +2111,9 @@ function setupUIBindings() {
 
   document.getElementById('btnDownloadLedmap').addEventListener('click', () => {
     downloadFile('ledmap.json', Exporters.wledLedmap());
+  });
+  document.getElementById('btnDownloadWledPlasma').addEventListener('click', () => {
+    downloadFile('plasma_preset.json', Exporters.wledPresetPlasma());
   });
   document.getElementById('btnDownloadSegments').addEventListener('click', () => {
     downloadFile('segments.json', Exporters.wledSegments());
@@ -2164,6 +2200,7 @@ function setupUIBindings() {
 
 function populateExportCode() {
   document.getElementById('codeWledMap').textContent = Exporters.wledLedmap();
+  document.getElementById('codeWledPlasma').textContent = Exporters.wledPresetPlasma();
   document.getElementById('codeWledSegments').textContent = Exporters.wledSegments();
   document.getElementById('codeFastLed').textContent = Exporters.fastLedCpp();
   document.getElementById('codeXLights').textContent = Exporters.xLightsXml();

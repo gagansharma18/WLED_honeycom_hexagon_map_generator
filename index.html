@@ -515,6 +515,7 @@
 
       <div class="modal-tabs">
         <button class="tab-btn active" data-tab="tabWledMap">WLED ledmap.json</button>
+        <button class="tab-btn" data-tab="tabWledPlasma">WLED 2D Plasma Preset</button>
         <button class="tab-btn" data-tab="tabWledSegments">WLED Segments (Presets)</button>
         <button class="tab-btn" data-tab="tabFastLed">FastLED / C++ (Arduino)</button>
         <button class="tab-btn" data-tab="tabXLights">xLights (.xmodel)</button>
@@ -533,6 +534,21 @@
           </div>
           <div class="modal-actions">
             <button class="btn btn-primary" id="btnDownloadLedmap">Download ledmap.json</button>
+          </div>
+        </div>
+
+        <!-- WLED 2D Plasma Preset Tab -->
+        <div class="tab-pane" id="tabWledPlasma">
+          <div class="pane-instructions">
+            <span class="badge info">2D Plasma Effect</span>
+            <span>Applies the exact 2D Plasma & Cyberpunk Color wave effect directly to your WLED controller via JSON API.</span>
+          </div>
+          <div class="code-container">
+            <button class="copy-code-btn" id="btnCopyWledPlasma" title="Copy to clipboard">Copy</button>
+            <pre><code id="codeWledPlasma"></code></pre>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" id="btnDownloadWledPlasma">Download plasma_preset.json</button>
           </div>
         </div>
 

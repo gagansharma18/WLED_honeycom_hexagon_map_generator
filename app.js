@@ -768,9 +768,25 @@ const ctx = canvas.getContext('2d');
 
 function resizeCanvas() {
   const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * window.devicePixelRatio;
-  canvas.height = rect.height * window.devicePixelRatio;
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  canvas.width = rect.width * (window.devicePixelRatio || 1);
+  canvas.height = rect.height * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+
+function screenToWorld(screenX, screenY) {
+  const width = canvas.width / (window.devicePixelRatio || 1);
+  const height = canvas.height / (window.devicePixelRatio || 1);
+  const wx = (screenX - (width / 2 + AppState.camera.x)) / AppState.camera.zoom;
+  const wy = (screenY - (height / 2 + AppState.camera.y)) / AppState.camera.zoom;
+  return { x: wx, y: wy };
+}
+
+function worldToScreen(worldX, worldY) {
+  const width = canvas.width / (window.devicePixelRatio || 1);
+  const height = canvas.height / (window.devicePixelRatio || 1);
+  const sx = width / 2 + AppState.camera.x + worldX * AppState.camera.zoom;
+  const sy = height / 2 + AppState.camera.y + worldY * AppState.camera.zoom;
+  return { x: sx, y: sy };
 }
 
 function render() {

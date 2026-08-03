@@ -143,7 +143,15 @@ const AppState = {
   cachedLeds: [], // Array of { globalIndex, hexId, hexSeq, x, y, u, v, r, g, b }
   cachedMatrix: null,
   quantizationMode: 'auto',
-  renderQuality: 'smooth' // 'smooth' (Default High FPS) | 'glowing' (Heavy Shader)
+  renderQuality: 'smooth', // 'smooth' (Default High FPS) | 'glowing' (Heavy Shader)
+
+  // Live WLED Hardware WiFi Control State
+  wledHardware: {
+    ip: '10.130.79.95',
+    isSyncing: false,
+    isConnected: false,
+    lastSyncTime: 0
+  }
 };
 
 // ==========================================================================
@@ -916,6 +924,145 @@ function updateSimulator(dt) {
     led.g = Math.round(g * sim.brightness);
     led.b = Math.round(b * sim.brightness);
   });
+
+  // Trigger live hardware frame stream if active
+  if (AppState.wledHardware && AppState.wledHardware.isSyncing) {
+    sendWledLiveFrame();
+  }
+}
+
+// ==========================================================================
+// 7.5 WLED Live Hardware WiFi Synchronization Engine
+// ==========================================================================
+let isSendingWledFrame = false;
+
+function setWledStatus(isConnected, text) {
+  AppState.wledHardware.isConnected = isConnected;
+  const badge = document.getElementById('wledSyncStatusBadge');
+  if (badge) {
+    badge.textContent = text;
+    if (isConnected) {
+      badge.style.background = 'rgba(16, 185, 129, 0.2)';
+      badge.style.color = '#34d399';
+    } else {
+      badge.style.background = 'rgba(239, 68, 68, 0.2)';
+      badge.style.color = '#f87171';
+    }
+  }
+}
+
+async function sendWledLiveFrame() {
+  if (!AppState.wledHardware.isSyncing || isSendingWledFrame) return;
+  const ip = AppState.wledHardware.ip;
+  if (!ip) return;
+
+  const now = Date.now();
+  if (now - AppState.wledHardware.lastSyncTime < 80) return; // Throttle to ~12 FPS over HTTP API to prevent network buffer overflow
+  AppState.wledHardware.lastSyncTime = now;
+
+  isSendingWledFrame = true;
+  const leds = AppState.cachedLeds;
+  const colorData = [];
+  leds.forEach(l => {
+    colorData.push(l.r, l.g, l.b);
+  });
+
+  const body = {
+    on: true,
+    bri: Math.round(AppState.simulator.brightness * 255),
+    live: true,
+    seg: [{
+      id: 0,
+      i: [0, colorData]
+    }]
+  };
+
+  try {
+    const res = await fetch(`http://${ip}/json/state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(1200)
+    });
+    if (res.ok) {
+      setWledStatus(true, '⚡ Streaming FX');
+    }
+  } catch (err) {
+    // Network timeout or CORS
+    setWledStatus(false, 'Live Stream Timeout');
+  } finally {
+    isSendingWledFrame = false;
+  }
+}
+
+async function testWledConnection() {
+  const ipInput = document.getElementById('wledIpAddress');
+  const ip = ipInput ? ipInput.value.trim() : '10.130.79.95';
+  if (!ip) {
+    showToast('Enter WLED IP Address first', 'error');
+    return;
+  }
+  AppState.wledHardware.ip = ip;
+  showToast(`Testing http://${ip}/json/info...`);
+
+  try {
+    const res = await fetch(`http://${ip}/json/info`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json();
+      const name = data.name || 'WLED Device';
+      const ver = data.ver || '';
+      showToast(`Connected to ${name} (${ver})! 🚀`);
+      setWledStatus(true, `Connected (${name})`);
+    } else {
+      setWledStatus(false, 'HTTP Error');
+      showToast(`WLED responded with HTTP ${res.status}`, 'error');
+    }
+  } catch (err) {
+    setWledStatus(false, 'Connection Failed');
+    showToast(`Unable to reach http://${ip}/json/info. Check WiFi IP.`, 'error');
+  }
+}
+
+async function directPushLedmapToWled() {
+  const ipInput = document.getElementById('wledIpAddress');
+  const ip = ipInput ? ipInput.value.trim() : AppState.wledHardware.ip;
+  if (!ip) {
+    showToast('Please enter your WLED IP Address', 'error');
+    return;
+  }
+  AppState.wledHardware.ip = ip;
+  showToast(`Uploading ledmap.json to http://${ip}/edit...`);
+
+  const jsonContent = Exporters.wledLedmap();
+  const formData = new FormData();
+  const blob = new Blob([jsonContent], { type: 'application/json' });
+  formData.append('data', blob, '/ledmap.json');
+
+  try {
+    const res = await fetch(`http://${ip}/edit`, {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(5000)
+    });
+
+    if (res.ok || res.status === 200 || res.status === 201) {
+      showToast('🚀 ledmap.json pushed to WLED! Rebooting controller...');
+      setWledStatus(true, 'Connected (Mapped)');
+
+      // Reboot request to load new ledmap.json
+      try {
+        await fetch(`http://${ip}/json/state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rb: true })
+        });
+      } catch (e) {}
+    } else {
+      showToast('Uploaded to WLED! Check 2D Matrix config in WLED.', 'info');
+    }
+  } catch (err) {
+    showToast(`Could not reach http://${ip}/edit. Check IP or CORS.`, 'error');
+  }
 }
 
 // ==========================================================================
@@ -2062,6 +2209,41 @@ function setupUIBindings() {
     AppState.simulator.brightness = parseInt(e.target.value) / 100;
     document.getElementById('valFxBrightness').textContent = `${e.target.value}%`;
   });
+
+  // WLED Hardware Control & Sync Controls
+  const ipInput = document.getElementById('wledIpAddress');
+  if (ipInput) {
+    ipInput.addEventListener('change', (e) => {
+      AppState.wledHardware.ip = e.target.value.trim();
+    });
+  }
+
+  const btnTestConn = document.getElementById('btnTestWledConn');
+  if (btnTestConn) {
+    btnTestConn.addEventListener('click', testWledConnection);
+  }
+
+  const btnLiveSync = document.getElementById('btnToggleWledLiveSync');
+  if (btnLiveSync) {
+    btnLiveSync.addEventListener('click', () => {
+      AppState.wledHardware.isSyncing = !AppState.wledHardware.isSyncing;
+      btnLiveSync.classList.toggle('active', AppState.wledHardware.isSyncing);
+      const textSpan = document.getElementById('btnWledLiveSyncText');
+      if (AppState.wledHardware.isSyncing) {
+        textSpan.textContent = '⏹ Stop Streaming Live FX';
+        showToast(`⚡ Live Streaming FX to http://${AppState.wledHardware.ip}...`);
+      } else {
+        textSpan.textContent = '⚡ Stream Live FX to Hardware';
+        setWledStatus(false, 'Disconnected');
+        showToast('Stopped Live Hardware Stream');
+      }
+    });
+  }
+
+  const btnPushLedmap = document.getElementById('btnDirectPushLedmap');
+  if (btnPushLedmap) {
+    btnPushLedmap.addEventListener('click', directPushLedmapToWled);
+  }
 
   // Export Modal & Tabs
   const exportModal = document.getElementById('exportModal');

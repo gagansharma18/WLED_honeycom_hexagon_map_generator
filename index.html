@@ -477,6 +477,35 @@
         </div>
       </section>
 
+      <!-- Direct WLED Hardware Control & Live WiFi Sync -->
+      <section class="panel-section" style="border-color: rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.03);">
+        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>🌐 WLED Hardware WiFi Control</span>
+          <span class="badge-tag" id="wledSyncStatusBadge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">Disconnected</span>
+        </div>
+
+        <div class="form-row">
+          <label for="wledIpAddress">WLED Controller IP Address</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="wledIpAddress" class="btn-select" style="flex: 1; font-family: 'JetBrains Mono', monospace;" value="10.130.79.95" placeholder="192.168.1.100">
+            <button class="btn btn-secondary btn-sm" id="btnTestWledConn" title="Test WLED Connection">Test</button>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top: 8px; gap: 6px;">
+          <button class="btn btn-primary glow-btn full-width" id="btnToggleWledLiveSync">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <span id="btnWledLiveSyncText">⚡ Stream Live FX to Hardware</span>
+          </button>
+        </div>
+
+        <div class="btn-row" style="margin-top: 6px;">
+          <button class="btn btn-secondary full-width" id="btnDirectPushLedmap" style="font-size: 11px;">
+            <span>📤 1-Click Push ledmap.json to WLED</span>
+          </button>
+        </div>
+      </section>
+
       <!-- Hardware & Power Estimator -->
       <section class="panel-section">
         <div class="section-title">Hardware & Power Estimation</div>

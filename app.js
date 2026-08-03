@@ -142,7 +142,8 @@ const AppState = {
   // Computed layout caches
   cachedLeds: [], // Array of { globalIndex, hexId, hexSeq, x, y, u, v, r, g, b }
   cachedMatrix: null,
-  quantizationMode: 'auto'
+  quantizationMode: 'auto',
+  renderQuality: 'smooth' // 'smooth' (Default High FPS) | 'glowing' (Heavy Shader)
 };
 
 // ==========================================================================
@@ -1015,6 +1016,7 @@ function drawGuideGrid(ctx) {
 function drawHexagons(ctx) {
   const R = AppState.hexRadius;
   const isDense = AppState.displayMode === 'dense';
+  const isGlowing = AppState.renderQuality === 'glowing';
   const hexLedMap = AppState.hexLedMap;
   const wiringIndexMap = AppState.wiringChainIndexMap;
 
@@ -1025,6 +1027,8 @@ function drawHexagons(ctx) {
     const chainIdx = wiringIndexMap ? wiringIndexMap.get(hex.id) : -1;
     const led = isDense && hexLedMap ? hexLedMap.get(hex.id) : null;
 
+    if (isGlowing) ctx.save();
+
     // Module Outer Polygon
     ctx.beginPath();
     corners.forEach((c, idx) => {
@@ -1034,19 +1038,50 @@ function drawHexagons(ctx) {
     ctx.closePath();
 
     if (isDense && led) {
-      // Fast Direct Pixel Tile Fill
-      ctx.fillStyle = `rgb(${led.r}, ${led.g}, ${led.b})`;
+      if (isGlowing) {
+        // Heavy Design: Radial Gradient Fill
+        const fillGrad = ctx.createRadialGradient(center.x, center.y, 2, center.x, center.y, R * 0.95);
+        fillGrad.addColorStop(0, `rgba(${led.r}, ${led.g}, ${led.b}, 0.85)`);
+        fillGrad.addColorStop(0.7, `rgba(${led.r}, ${led.g}, ${led.b}, 0.55)`);
+        fillGrad.addColorStop(1, `rgba(${Math.round(led.r * 0.25)}, ${Math.round(led.g * 0.25)}, ${Math.round(led.b * 0.25)}, 0.35)`);
+        ctx.fillStyle = fillGrad;
+      } else {
+        // Default Smooth Design: Fast Direct Pixel Tile Fill
+        ctx.fillStyle = `rgb(${led.r}, ${led.g}, ${led.b})`;
+      }
     } else {
       ctx.fillStyle = isSelected ? 'rgba(0, 242, 254, 0.15)' : 'rgba(17, 24, 39, 0.7)';
     }
     ctx.fill();
 
     // Module Border
-    ctx.strokeStyle = isSelected ? '#00f2fe' : (isDense && led ? `rgba(${led.r}, ${led.g}, ${led.b}, 0.8)` : 'rgba(255, 255, 255, 0.15)');
-    ctx.lineWidth = isSelected ? 2.5 : 1.2;
+    if (isGlowing) {
+      // Heavy Design: Neon Shadow Glow
+      if (isDense && led) {
+        ctx.strokeStyle = isSelected ? '#00f2fe' : `rgba(${led.r}, ${led.g}, ${led.b}, 0.85)`;
+        ctx.lineWidth = isSelected ? 2.5 : 1.5;
+        ctx.shadowColor = isSelected ? 'rgba(0, 242, 254, 0.8)' : `rgba(${led.r}, ${led.g}, ${led.b}, 0.6)`;
+        ctx.shadowBlur = isSelected ? 16 : 8;
+      } else {
+        ctx.strokeStyle = isSelected ? '#00f2fe' : 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = isSelected ? 2.5 : 1.2;
+        if (isSelected) {
+          ctx.shadowColor = 'rgba(0, 242, 254, 0.6)';
+          ctx.shadowBlur = 12;
+        }
+      }
+    } else {
+      // Default Smooth Design: Crisp Border
+      ctx.strokeStyle = isSelected ? '#00f2fe' : (isDense && led ? `rgba(${led.r}, ${led.g}, ${led.b}, 0.8)` : 'rgba(255, 255, 255, 0.15)');
+      ctx.lineWidth = isSelected ? 2.5 : 1.2;
+    }
     ctx.stroke();
 
-    // Hexagon ID Badge & Text Labeling
+    // Text Labeling
+    if (isGlowing) {
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    }
     ctx.fillStyle = isDense ? '#ffffff' : '#e2e8f0';
     ctx.font = '700 11px Inter, sans-serif';
     ctx.textAlign = 'center';
@@ -1077,6 +1112,8 @@ function drawHexagons(ctx) {
       ctx.lineWidth = 1;
       ctx.stroke();
     }
+
+    if (isGlowing) ctx.restore();
   });
 }
 
@@ -1107,21 +1144,47 @@ function drawWiringLines(ctx) {
 
 function drawLeds(ctx) {
   const isDense = AppState.displayMode === 'dense';
+  const isGlowing = AppState.renderQuality === 'glowing';
 
   if (isDense) {
-    // Single batched path for center diodes
-    ctx.beginPath();
-    AppState.cachedLeds.forEach(led => {
-      ctx.moveTo(led.x + 3.5, led.y);
-      ctx.arc(led.x, led.y, 3.5, 0, Math.PI * 2);
-    });
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
+    if (isGlowing) {
+      // Heavy Design: Individual glowing diode dots with shadowBlur
+      ctx.save();
+      AppState.cachedLeds.forEach(led => {
+        ctx.beginPath();
+        ctx.arc(led.x, led.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgb(${led.r}, ${led.g}, ${led.b})`;
+        ctx.shadowColor = `rgba(${led.r}, ${led.g}, ${led.b}, 0.8)`;
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+      ctx.restore();
+    } else {
+      // Default Smooth Design: Single batched path for center diodes
+      ctx.beginPath();
+      AppState.cachedLeds.forEach(led => {
+        ctx.moveTo(led.x + 3.5, led.y);
+        ctx.arc(led.x, led.y, 3.5, 0, Math.PI * 2);
+      });
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
     return;
   }
 
   const ledRadius = 3.5;
   AppState.cachedLeds.forEach(led => {
+    if (isGlowing) {
+      // Heavy Design: Glow Halo
+      ctx.beginPath();
+      ctx.arc(led.x, led.y, ledRadius + 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${led.r}, ${led.g}, ${led.b}, 0.35)`;
+      ctx.fill();
+    }
+
     // Solid LED Core
     ctx.beginPath();
     ctx.arc(led.x, led.y, ledRadius, 0, Math.PI * 2);
@@ -1725,6 +1788,15 @@ function setupCanvasInteractions() {
 // 14. Event Listeners & UI Binding
 // ==========================================================================
 function setupUIBindings() {
+  // Render Quality Selector
+  const qualitySelect = document.getElementById('renderQualitySelect');
+  if (qualitySelect) {
+    qualitySelect.addEventListener('change', (e) => {
+      AppState.renderQuality = e.target.value;
+      showToast(e.target.value === 'glowing' ? '✨ Switched to Heavy Glow Design Mode' : '⚡ Switched to Ultra-Smooth High FPS Mode');
+    });
+  }
+
   // Template Selector
   document.getElementById('templateSelect').addEventListener('change', (e) => {
     const fn = Templates[e.target.value];

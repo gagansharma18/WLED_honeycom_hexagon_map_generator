@@ -957,42 +957,39 @@ async function sendWledLiveFrame() {
   if (!ip) return;
 
   const now = Date.now();
-  if (now - AppState.wledHardware.lastSyncTime < 100) return;
+  if (now - AppState.wledHardware.lastSyncTime < 80) return; // ~12 FPS live stream over WiFi
   AppState.wledHardware.lastSyncTime = now;
 
   isSendingWledFrame = true;
   const leds = AppState.cachedLeds;
   const totalLeds = leds.length;
-
-  // Map active simulator effect to WLED native effect ID
-  let fxId = 82; // Default 2D Plasma
-  let palId = 35; // Default Cyberpunk
-  const fxName = AppState.simulator.effect;
-
-  if (fxName === 'rainbow_runner') { fxId = 9; palId = 0; }
-  else if (fxName === 'plasma_2d') { fxId = 82; palId = 35; }
-  else if (fxName === 'radial_ripple') { fxId = 111; palId = 35; }
-  else if (fxName === 'fire_2d') { fxId = 66; palId = 35; }
-  else if (fxName === 'tracer_single') { fxId = 54; palId = 0; }
+  if (totalLeds === 0) {
+    isSendingWledFrame = false;
+    return;
+  }
 
   const bri = Math.round(AppState.simulator.brightness * 255);
-  const speed = Math.round(AppState.simulator.speed * 80);
 
-  // Method 1: Send JSON API (Turns on Master Power & Segment 0)
+  // Build per-pixel RGB color array for WLED JSON API
+  // Format: [index0, r, g, b, index1, r, g, b, ...] or nested arrays
+  const pixelArray = [];
+  leds.forEach(l => {
+    pixelArray.push(l.globalIndex, [l.r, l.g, l.b]);
+  });
+
   const body = {
     on: true,
-    bri: Math.max(50, bri),
+    bri: Math.max(20, bri),
+    live: true,
     mainseg: 0,
     seg: [{
       id: 0,
       start: 0,
-      stop: Math.max(1, totalLeds),
+      stop: totalLeds,
       on: true,
-      bri: Math.max(50, bri),
-      fx: fxId,
-      sx: speed,
-      ix: 160,
-      pal: palId
+      bri: Math.max(20, bri),
+      fx: 0, // Solid mode required for live pixel streaming
+      i: pixelArray.flat()
     }]
   };
 
@@ -1002,14 +999,12 @@ async function sendWledLiveFrame() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       mode: 'no-cors',
-      signal: AbortSignal.timeout(1500)
+      signal: AbortSignal.timeout(1200)
     });
-    setWledStatus(true, '⚡ FX Active on WLED');
+    setWledStatus(true, '⚡ Streaming Live Pixels');
   } catch (err) {
-    // Method 2: HTTP GET /win API Fallback (Bypasses CORS completely!)
-    const img = new Image();
-    img.src = `http://${ip}/win&A=${Math.max(50, bri)}&FX=${fxId}&FP=${palId}&SX=${speed}&t=${Date.now()}`;
-    setWledStatus(true, 'Sent via /win API');
+    // CORS or timeout fallback
+    setWledStatus(false, 'Stream Error');
   } finally {
     isSendingWledFrame = false;
   }
@@ -2304,6 +2299,37 @@ function sendWledHardwareTestColor(r, g, b) {
   const btnPushLedmap = document.getElementById('btnDirectPushLedmap');
   if (btnPushLedmap) {
     btnPushLedmap.addEventListener('click', directPushLedmapToWled);
+  }
+
+  const btnNativePlasma = document.getElementById('btnTriggerNativePlasma');
+  if (btnNativePlasma) {
+    btnNativePlasma.addEventListener('click', () => {
+      const ipInput = document.getElementById('wledIpAddress');
+      const ip = ipInput ? ipInput.value.trim() : '10.130.79.95';
+      if (!ip) {
+        showToast('Enter WLED IP Address first', 'error');
+        return;
+      }
+      showToast(`Triggering WLED 2D Plasma on http://${ip}...`);
+
+      const img = new Image();
+      img.src = `http://${ip}/win&A=255&FX=82&FP=35&SX=128&IX=160&t=${Date.now()}`;
+
+      try {
+        fetch(`http://${ip}/json/state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            on: true,
+            bri: 255,
+            seg: [{ id: 0, start: 0, stop: Math.max(1, AppState.cachedLeds.length), on: true, bri: 255, fx: 82, pal: 35, sx: 128, ix: 160 }]
+          }),
+          mode: 'no-cors'
+        });
+      } catch (e) {}
+
+      setWledStatus(true, '✨ Native 2D Plasma Active');
+    });
   }
 
   // Diagnostic Test Color Buttons

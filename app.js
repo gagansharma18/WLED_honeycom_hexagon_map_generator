@@ -843,8 +843,33 @@ function compute2DMatrix() {
 }
 
 // ==========================================================================
-// 7. Live FX Simulator Engine (Optimized O(1))
+// 7. Centralized Live FX Effects Catalog & Simulator Engine
 // ==========================================================================
+const EffectsCatalog = [
+  { id: 'plasma_2d', label: '🌌 2D Color Plasma & Noise' },
+  { id: 'matrix_rain', label: '💻 Cyberpunk Matrix Rain' },
+  { id: 'galaxy_spiral', label: '🌀 Rotating Spiral Galaxy' },
+  { id: 'neon_wave', label: '⚡ Electric Neon Wave' },
+  { id: 'fireworks', label: '🎆 Fireworks Burst Explosion' },
+  { id: 'kaleidoscope', label: '💎 Hexagon Kaleidoscope' },
+  { id: 'starfield', label: '✨ Deep Space Starfield' },
+  { id: 'rainbow_runner', label: '🌈 Rainbow Edge Runner' },
+  { id: 'radial_ripple', label: '🌊 Expanding Radial Ripple' },
+  { id: 'audio_reactive', label: '🎵 Audio Reactive Pulse (GEQ)' },
+  { id: 'fire_2d', label: '🔥 Fire 2D Matrix' },
+  { id: 'tracer_single', label: '💡 Single LED Tracer (Wiring Test)' },
+  { id: 'solid_color', label: '🎨 Solid Palette Test' }
+];
+
+function populateFxDropdowns() {
+  const fxSelect = document.getElementById('fxSelector');
+  if (!fxSelect) return;
+  const currentVal = fxSelect.value || AppState.simulator.effect;
+  fxSelect.innerHTML = EffectsCatalog.map(fx => 
+    `<option value="${fx.id}" ${fx.id === currentVal ? 'selected' : ''}>${fx.label}</option>`
+  ).join('');
+}
+
 function updateSimulator(dt) {
   if (!AppState.simulator.isRunning) return;
 
@@ -1189,32 +1214,52 @@ async function directPushLedmapToWled() {
   }
   AppState.wledHardware.ip = ip;
   const totalLeds = AppState.cachedLeds.length;
+  const matrix = AppState.cachedMatrix;
+  const matW = matrix ? matrix.width : 13;
+  const matH = matrix ? matrix.height : 13;
+
   showToast(`🚀 Auto-Configuring WLED at http://${ip}...`);
 
-  // Step 1: Upload ledmap.json to WLED
+  // Step 1: Upload ledmap.json to WLED (2D pixel index map)
   const contentLedmap = Exporters.wledLedmap();
   await uploadFileToWled(ip, 'ledmap.json', contentLedmap);
 
-  // Step 2: Upload 2d.json to WLED (Configures Native 2D Matrix Setup)
-  const content2d = Exporters.wled2dJson();
-  await uploadFileToWled(ip, '2d.json', content2d);
-
-  // Step 3: Fetch existing /cfg.json, update LED total to 169, and upload back
+  // Step 2: Fetch existing /cfg.json, update LED total count + 2D Matrix panel config, and upload back to /edit /upload
   try {
     const cfgRes = await fetch(`http://${ip}/cfg.json`, { signal: AbortSignal.timeout(3000) });
+    let cfg = {};
     if (cfgRes.ok) {
-      const cfg = await cfgRes.json();
-      if (cfg && cfg.hw && cfg.hw.led) {
-        cfg.hw.led.total = totalLeds;
-        if (Array.isArray(cfg.hw.led.ins) && cfg.hw.led.ins.length > 0) {
-          cfg.hw.led.ins[0].len = totalLeds;
-        }
-        await uploadFileToWled(ip, 'cfg.json', JSON.stringify(cfg, null, 2));
-      }
+      cfg = await cfgRes.json();
     }
+    
+    // Ensure hardware LED count configuration
+    if (!cfg.hw) cfg.hw = {};
+    if (!cfg.hw.led) cfg.hw.led = {};
+    cfg.hw.led.total = totalLeds;
+    if (!Array.isArray(cfg.hw.led.ins) || cfg.hw.led.ins.length === 0) {
+      cfg.hw.led.ins = [{ len: totalLeds }];
+    } else {
+      cfg.hw.led.ins[0].len = totalLeds;
+    }
+
+    // Ensure 2D Matrix panel setup inside cfg.json matching WLED v0.14+/v16 schema
+    if (!cfg.matrix) cfg.matrix = {};
+    cfg.matrix.mpc = 1;
+    cfg.matrix.panels = [{
+      b: false,
+      r: false,
+      v: false,
+      s: false,
+      x: 0,
+      y: 0,
+      h: matH,
+      w: matW
+    }];
+
+    await uploadFileToWled(ip, 'cfg.json', JSON.stringify(cfg, null, 2));
   } catch (e) {}
 
-  // Step 4: Configure WLED Hardware LED Count via /json/cfg endpoint
+  // Step 3: Configure WLED Hardware LED Count & 2D Matrix via /json/cfg endpoint
   try {
     await fetch(`http://${ip}/json/cfg`, {
       method: 'POST',
@@ -1224,17 +1269,17 @@ async function directPushLedmapToWled() {
             total: totalLeds,
             ins: [{ len: totalLeds }]
           }
+        },
+        matrix: {
+          mpc: 1,
+          panels: [{ b: false, r: false, v: false, s: false, x: 0, y: 0, h: matH, w: matW }]
         }
       }),
       signal: AbortSignal.timeout(3000)
     });
   } catch (e) {}
 
-  // Step 5: Expand Segment 0 with 2D Matrix dimensions, Power ON, and set 2D Plasma
-  const matrix = AppState.cachedMatrix;
-  const matW = matrix ? matrix.width : 13;
-  const matH = matrix ? matrix.height : 13;
-
+  // Step 4: Expand Segment 0 with 2D Matrix dimensions, Power ON, and set 2D Plasma
   try {
     await fetch(`http://${ip}/json/state`, {
       method: 'POST',
@@ -1260,7 +1305,7 @@ async function directPushLedmapToWled() {
     });
   } catch (e) {}
 
-  // Step 6: Upload standalone web app (honeycomb.htm) to WLED filesystem
+  // Step 5: Upload standalone web app (honeycomb.htm) to WLED filesystem
   const contentHtml = Exporters.wledStandaloneHtml();
   await uploadFileToWled(ip, 'honeycomb.htm', contentHtml, 'text/html');
 
@@ -1629,7 +1674,6 @@ function renderMiniMatrix() {
 // ==========================================================================
 const Exporters = {
   wledStandaloneHtml() {
-    // Compress 169 LED objects into a ultra-compact flat array [x0,y0, x1,y1, ...] -> Only ~600 bytes!
     const flatCoords = [];
     AppState.cachedLeds.forEach(l => {
       flatCoords.push(Math.round(l.x), Math.round(l.y));
@@ -1637,7 +1681,11 @@ const Exporters = {
     const matrix = AppState.cachedMatrix;
     const bounds = matrix ? matrix.bounds : { minX: -200, maxX: 200, minY: -200, maxY: 200, spanX: 400, spanY: 400 };
 
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Honeycomb FX</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui}body{background:#0b0f19;color:#fff;display:flex;flex-direction:column;align-items:center;padding:10px}.card{background:#0f172a;border:1px solid #334155;border-radius:14px;width:100%;max-width:400px;padding:12px}h1{font-size:15px;text-align:center;margin-bottom:8px;color:#00f2fe}canvas{width:100%;height:220px;background:#070a12;border-radius:8px;margin-bottom:8px}.row{margin-bottom:6px}label{display:block;font-size:10px;color:#94a3b8;margin-bottom:2px}select,input{width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:6px;border-radius:6px;font-size:12px}.btn{width:100%;padding:8px;border-radius:6px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#00f2fe;color:#000}.btn.active{background:#f72585;color:#fff}</style></head><body><div class="card"><h1>⬢ Honeycomb Live FX</h1><canvas id="c"></canvas><div class="row"><label>Effect</label><select id="fx"><option value="plasma_2d" selected>🌌 2D Plasma & Noise</option><option value="matrix_rain">💻 Matrix Rain</option><option value="galaxy_spiral">🌀 Spiral Galaxy</option><option value="neon_wave">⚡ Neon Wave</option><option value="fireworks">🎆 Fireworks</option><option value="starfield">✨ Starfield</option></select></div><div class="row"><label>Palette</label><select id="pal"><option value="cyberpunk" selected>Cyberpunk</option><option value="rainbow">Rainbow</option><option value="ocean">Ocean</option><option value="fire">Fire</option></select></div><div class="row"><label>Brightness</label><input type="range" id="bri" min="10" max="255" value="255"></div><button class="btn active" id="syncBtn">⏹ Pause Live WiFi Streaming</button></div><script>var flat=${JSON.stringify(flatCoords)};var bounds=${JSON.stringify(bounds)};var leds=[];for(var i=0;i<flat.length;i+=2){leds.push({x:flat[i],y:flat[i+1],i:i/2});}var totalLeds=leds.length,cvs=document.getElementById('c'),ctx=cvs.getContext('2d');cvs.width=cvs.clientWidth||300;cvs.height=cvs.clientHeight||220;var isSyncing=true,effect='plasma_2d',palette='cyberpunk',brightness=1.0,time=0,lastTime=Date.now();function palFn(t){t=(t%1+1)%1;if(palette==='rainbow')return[Math.abs(Math.round(255*Math.sin(t*6.28))),Math.abs(Math.round(255*Math.sin(t*6.28+2))),Math.abs(Math.round(255*Math.sin(t*6.28+4)))];if(palette==='ocean')return[Math.round(14+t*31),Math.round(165+t*47),Math.round(233-t*42)];if(palette==='fire')return[255,Math.round(t*200),Math.round(t*50)];return[Math.round(t*247),Math.round(242-t*205),Math.round(254-t*121)]}document.getElementById('fx').onchange=function(e){effect=e.target.value};document.getElementById('pal').onchange=function(e){palette=e.target.value};document.getElementById('bri').oninput=function(e){brightness=e.target.value/255};var syncBtn=document.getElementById('syncBtn');syncBtn.onclick=function(){isSyncing=!isSyncing;syncBtn.textContent=isSyncing?'⏹ Pause Live WiFi Streaming':'⚡ Stream Live FX to Panel';syncBtn.className=isSyncing?'btn active':'btn'};function loop(){var now=Date.now(),dt=Math.min(0.1,(now-lastTime)/1000);lastTime=now;time+=dt;ctx.clearRect(0,0,cvs.width,cvs.height);var spanX=bounds.spanX||1,spanY=bounds.spanY||1,minX=bounds.minX||0,minY=bounds.minY||0,hexColors=[],scale=Math.min((cvs.width-30)/spanX,(cvs.height-30)/spanY),offsetX=cvs.width/2,offsetY=cvs.height/2;for(var k=0;k<leds.length;k++){var l=leds[k],r=0,g=0,b=0,nx=(l.x-minX)/spanX,ny=(l.y-minY)/spanY;if(effect==='plasma_2d'){var v=Math.sin(nx*5+time*2)+Math.sin(ny*5+time*1.5);var rgb=palFn((v+2)/4);r=rgb[0];g=rgb[1];b=rgb[2]}else if(effect==='matrix_rain'){var drop=(ny+Math.sin(nx*10)*0.3+time*1.2)%1;if(drop<0)drop+=1;if(drop>0.8){r=180;g=255;b=200}else if(drop>0.2){r=0;g=Math.round(255*(drop-0.2)/0.6);b=100}else{r=0;g=20;b=5}}else if(effect==='galaxy_spiral'){var angle=Math.atan2(l.y,l.x),dist=Math.hypot(l.x,l.y),rgbG=palFn((Math.sin(angle*2+dist*0.03-time*2)+1)/2);r=rgbG[0];g=rgbG[1];b=rgbG[2]}else{var rgbD=palFn((l.i/totalLeds+time*0.5)%1);r=rgbD[0];g=rgbD[1];b=rgbD[2]}r=Math.round(r*brightness);g=Math.round(g*brightness);b=Math.round(b*brightness);var rH=r.toString(16).padStart(2,'0'),gH=g.toString(16).padStart(2,'0'),bH=b.toString(16).padStart(2,'0');hexColors.push((rH+gH+bH).toUpperCase());var px=offsetX+l.x*scale,py=offsetY+l.y*scale;ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fillStyle='rgb('+r+','+g+','+b+')';ctx.fill()}if(isSyncing&&Math.floor(time*10)!==Math.floor((time-dt)*10)){var payload=[0].concat(hexColors);fetch('/json/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:true,bri:Math.round(brightness*255),seg:[{id:0,fx:0,i:payload}]})}).catch(function(){})}requestAnimationFrame(loop)}requestAnimationFrame(loop)<\/script></body></html>`;
+    const fxOptionsHtml = EffectsCatalog.map((fx, idx) => 
+      `<option value="${fx.id}" ${idx === 0 ? 'selected' : ''}>${fx.label}</option>`
+    ).join('');
+
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Honeycomb FX</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui}body{background:#0b0f19;color:#fff;display:flex;flex-direction:column;align-items:center;padding:10px}.card{background:#0f172a;border:1px solid #334155;border-radius:14px;width:100%;max-width:400px;padding:12px}h1{font-size:15px;text-align:center;margin-bottom:8px;color:#00f2fe}canvas{width:100%;height:220px;background:#070a12;border-radius:8px;margin-bottom:8px}.row{margin-bottom:6px}label{display:block;font-size:10px;color:#94a3b8;margin-bottom:2px}select,input{width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:6px;border-radius:6px;font-size:12px}.btn{width:100%;padding:8px;border-radius:6px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#00f2fe;color:#000}.btn.active{background:#f72585;color:#fff}</style></head><body><div class="card"><h1>⬢ Honeycomb Live FX</h1><canvas id="c"></canvas><div class="row"><label>Effect</label><select id="fx">${fxOptionsHtml}</select></div><div class="row"><label>Palette</label><select id="pal"><option value="cyberpunk" selected>Cyberpunk</option><option value="rainbow">Rainbow</option><option value="ocean">Ocean</option><option value="fire">Fire</option></select></div><div class="row"><label>Brightness</label><input type="range" id="bri" min="10" max="255" value="255"></div><button class="btn active" id="syncBtn">⏹ Pause Live WiFi Streaming</button></div><script>var flat=${JSON.stringify(flatCoords)};var bounds=${JSON.stringify(bounds)};var leds=[];for(var i=0;i<flat.length;i+=2){leds.push({x:flat[i],y:flat[i+1],i:i/2});}var totalLeds=leds.length,cvs=document.getElementById('c'),ctx=cvs.getContext('2d');cvs.width=cvs.clientWidth||300;cvs.height=cvs.clientHeight||220;var isSyncing=true,effect='plasma_2d',palette='cyberpunk',brightness=1.0,time=0,lastTime=Date.now();function palFn(t){t=(t%1+1)%1;if(palette==='rainbow')return[Math.abs(Math.round(255*Math.sin(t*6.28))),Math.abs(Math.round(255*Math.sin(t*6.28+2))),Math.abs(Math.round(255*Math.sin(t*6.28+4)))];if(palette==='ocean')return[Math.round(14+t*31),Math.round(165+t*47),Math.round(233-t*42)];if(palette==='fire')return[255,Math.round(t*200),Math.round(t*50)];return[Math.round(t*247),Math.round(242-t*205),Math.round(254-t*121)]}document.getElementById('fx').onchange=function(e){effect=e.target.value};document.getElementById('pal').onchange=function(e){palette=e.target.value};document.getElementById('bri').oninput=function(e){brightness=e.target.value/255};var syncBtn=document.getElementById('syncBtn');syncBtn.onclick=function(){isSyncing=!isSyncing;syncBtn.textContent=isSyncing?'⏹ Pause Live WiFi Streaming':'⚡ Stream Live FX to Panel';syncBtn.className=isSyncing?'btn active':'btn'};function loop(){var now=Date.now(),dt=Math.min(0.1,(now-lastTime)/1000);lastTime=now;time+=dt;ctx.clearRect(0,0,cvs.width,cvs.height);var spanX=bounds.spanX||1,spanY=bounds.spanY||1,minX=bounds.minX||0,minY=bounds.minY||0,hexColors=[],scale=Math.min((cvs.width-30)/spanX,(cvs.height-30)/spanY),offsetX=cvs.width/2,offsetY=cvs.height/2;for(var k=0;k<leds.length;k++){var l=leds[k],r=0,g=0,b=0,nx=(l.x-minX)/spanX,ny=(l.y-minY)/spanY;if(effect==='plasma_2d'){var v=Math.sin(nx*5+time*2)+Math.sin(ny*5+time*1.5)+Math.sin((nx+ny)*4+time);var rgb=palFn((v+3)/6);r=rgb[0];g=rgb[1];b=rgb[2]}else if(effect==='matrix_rain'){var drop=(ny+Math.sin(nx*10)*0.3+time*1.2)%1;if(drop<0)drop+=1;if(drop>0.8){r=180;g=255;b=200}else if(drop>0.2){var fade=(drop-0.2)/0.6;r=0;g=Math.round(255*fade);b=Math.round(100*fade)}else{r=0;g=20;b=5}}else if(effect==='galaxy_spiral'){var angle=Math.atan2(l.y,l.x),dist=Math.hypot(l.x,l.y),rgbG=palFn((Math.sin(angle*2+dist*0.03-time*2)+1)/2);r=rgbG[0];g=rgbG[1];b=rgbG[2]}else if(effect==='neon_wave'){var wave1=Math.sin(nx*6+ny*6+time*3),wave2=Math.cos(nx*4-ny*8+time*2),rgbW=palFn((wave1+wave2+2)/4);r=rgbW[0];g=rgbW[1];b=rgbW[2]}else if(effect==='fireworks'){var distF=Math.hypot(l.x,l.y),cyc=(time*1.5)%3,rr=cyc*100,df=Math.abs(distF-rr);if(df<30){var ints=1-df/30,rgbF=palFn((cyc/3+l.i/totalLeds)%1);r=Math.round(rgbF[0]*ints);g=Math.round(rgbF[1]*ints);b=Math.round(rgbF[2]*ints)}else{r=5;g=5;b=20}}else if(effect==='kaleidoscope'){var angleK=Math.atan2(l.y,l.x),distK=Math.hypot(l.x,l.y),symAngle=Math.abs((angleK%(Math.PI/3))-(Math.PI/6)),rgbK=palFn((Math.sin(symAngle*8+distK*0.04-time*3)+1)/2);r=rgbK[0];g=rgbK[1];b=rgbK[2]}else if(effect==='starfield'){var hash=Math.abs(Math.sin(l.i*12.9898+78.233)*43758.5453)%1,spd=hash*3+1,twk=(Math.sin(time*spd+hash*10)+1)/2;if(twk>0.5){var brg=(twk-0.5)/0.5,rgbS=palFn(hash);r=Math.round(rgbS[0]*brg);g=Math.round(rgbS[1]*brg);b=Math.round(rgbS[2]*brg)}else{r=5;g=8;b=20}}else if(effect==='rainbow_runner'){var rgbR=palFn(l.i/totalLeds+time*0.5);r=rgbR[0];g=rgbR[1];b=rgbR[2]}else if(effect==='radial_ripple'){var distR=Math.hypot(l.x,l.y),waveR=Math.sin(distR*0.05-time*4),rgbRip=palFn((waveR+1)/2);r=rgbRip[0];g=rgbRip[1];b=rgbRip[2]}else if(effect==='audio_reactive'){var beat=Math.sin(time*6+(l.i%6)*1.5);if(beat>0.3){var rgbA=palFn((l.i%6)*0.2+time*0.2);r=rgbA[0];g=rgbA[1];b=rgbA[2]}else{r=10;g=20;b=40}}else if(effect==='fire_2d'){var flk=Math.sin(l.x*0.2+time*8)*0.2+0.8,heat=Math.max(0,Math.min(1,(1-ny)*flk)),rgbFire=palFn(heat);r=rgbFire[0];g=rgbFire[1];b=rgbFire[2]}else if(effect==='tracer_single'){var actIdx=Math.floor(time*15)%totalLeds,dfT=(l.i-actIdx+totalLeds)%totalLeds;if(dfT===0){r=255;g=255;b=255}else if(dfT<6){var fd=1-dfT/6;r=0;g=Math.round(242*fd);b=Math.round(254*fd)}else{r=8;g=12;b=24}}else{var rgbSol=palFn(0.5);r=rgbSol[0];g=rgbSol[1];b=rgbSol[2]}r=Math.round(r*brightness);g=Math.round(g*brightness);b=Math.round(b*brightness);var rH=r.toString(16).padStart(2,'0'),gH=g.toString(16).padStart(2,'0'),bH=b.toString(16).padStart(2,'0');hexColors.push((rH+gH+bH).toUpperCase());var px=offsetX+l.x*scale,py=offsetY+l.y*scale;ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fillStyle='rgb('+r+','+g+','+b+')';ctx.fill()}if(isSyncing&&Math.floor(time*10)!==Math.floor((time-dt)*10)){var payload=[0].concat(hexColors);fetch('/json/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:true,bri:Math.round(brightness*255),seg:[{id:0,fx:0,i:payload}]})}).catch(function(){})}requestAnimationFrame(loop)}requestAnimationFrame(loop)<\/script></body></html>`;
   },
 
   wled2dJson() {
@@ -2433,6 +2481,8 @@ function setupUIBindings() {
   toggleBtn('toggleCoords', 'showCoords');
 
   // Simulator Controls
+  populateFxDropdowns();
+
   const simPlayBtn = document.getElementById('btnSimPlay');
   simPlayBtn.addEventListener('click', () => {
     AppState.simulator.isRunning = !AppState.simulator.isRunning;

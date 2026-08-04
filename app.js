@@ -913,6 +913,82 @@ function updateSimulator(dt) {
         }
         break;
       }
+      case 'matrix_rain': {
+        const spanX = bounds && bounds.spanX > 0 ? bounds.spanX : 1;
+        const spanY = bounds && bounds.spanY > 0 ? bounds.spanY : 1;
+        const minX = bounds ? bounds.minX : 0;
+        const minY = bounds ? bounds.minY : 0;
+        const nx = (led.x - minX) / spanX;
+        const ny = (led.y - minY) / spanY;
+        let drop = (ny + Math.sin(nx * 10) * 0.3 + sim.time * 1.2) % 1;
+        if (drop < 0) drop += 1;
+        if (drop > 0.8) {
+          [r, g, b] = [180, 255, 200];
+        } else if (drop > 0.2) {
+          const fade = (drop - 0.2) / 0.6;
+          [r, g, b] = [0, Math.round(255 * fade), Math.round(100 * fade)];
+        } else {
+          [r, g, b] = [0, 20, 5];
+        }
+        break;
+      }
+      case 'galaxy_spiral': {
+        const angle = Math.atan2(led.y, led.x);
+        const dist = Math.hypot(led.x, led.y);
+        const spiral = (angle * 2 + dist * 0.03 - sim.time * 2) % (Math.PI * 2);
+        const normSpiral = (Math.sin(spiral) + 1) / 2;
+        [r, g, b] = paletteFn(normSpiral);
+        break;
+      }
+      case 'neon_wave': {
+        const spanX = bounds && bounds.spanX > 0 ? bounds.spanX : 1;
+        const spanY = bounds && bounds.spanY > 0 ? bounds.spanY : 1;
+        const minX = bounds ? bounds.minX : 0;
+        const minY = bounds ? bounds.minY : 0;
+        const nx = (led.x - minX) / spanX;
+        const ny = (led.y - minY) / spanY;
+        const wave1 = Math.sin(nx * 6 + ny * 6 + sim.time * 3);
+        const wave2 = Math.cos(nx * 4 - ny * 8 + sim.time * 2);
+        const val = (wave1 + wave2 + 2) / 4;
+        [r, g, b] = paletteFn(val);
+        break;
+      }
+      case 'fireworks': {
+        const dist = Math.hypot(led.x, led.y);
+        const cycle = (sim.time * 1.5) % 3;
+        const ringRadius = cycle * 100;
+        const diff = Math.abs(dist - ringRadius);
+        if (diff < 30) {
+          const intensity = 1 - diff / 30;
+          const [pr, pg, pb] = paletteFn((cycle / 3 + led.globalIndex / totalLeds) % 1);
+          [r, g, b] = [Math.round(pr * intensity), Math.round(pg * intensity), Math.round(pb * intensity)];
+        } else {
+          [r, g, b] = [5, 5, 20];
+        }
+        break;
+      }
+      case 'kaleidoscope': {
+        let angle = Math.atan2(led.y, led.x);
+        const dist = Math.hypot(led.x, led.y);
+        const sector = Math.PI / 3;
+        angle = Math.abs((((angle % sector) + sector) % sector) - (sector / 2));
+        const val = (Math.sin(angle * 6 + dist * 0.04 + sim.time * 2) + 1) / 2;
+        [r, g, b] = paletteFn(val);
+        break;
+      }
+      case 'starfield': {
+        const hash = Math.abs(Math.sin(led.globalIndex * 12.9898 + 78.233) * 43758.5453) % 1;
+        const speed = hash * 3 + 1;
+        const twinkle = (Math.sin(sim.time * speed + hash * 10) + 1) / 2;
+        if (twinkle > 0.5) {
+          const bright = (twinkle - 0.5) / 0.5;
+          const [pr, pg, pb] = paletteFn(hash);
+          [r, g, b] = [Math.round(pr * bright), Math.round(pg * bright), Math.round(pb * bright)];
+        } else {
+          [r, g, b] = [5, 8, 20];
+        }
+        break;
+      }
       case 'solid_color': {
         [r, g, b] = paletteFn(0.5);
         break;
@@ -1074,6 +1150,36 @@ async function testWledConnection() {
   showToast(`WLED Controller at http://${ip} is reachable! 🚀`);
 }
 
+async function uploadFileToWled(ip, filename, content, mimeType = 'application/json') {
+  const blob = new Blob([content], { type: mimeType });
+
+  // 1. Try /upload endpoint (Standard WLED 0.14+ file upload API)
+  try {
+    const fd = new FormData();
+    fd.append('file', blob, filename);
+    const res = await fetch(`http://${ip}/upload`, {
+      method: 'POST',
+      body: fd,
+      signal: AbortSignal.timeout(4000)
+    });
+    if (res.ok) return true;
+  } catch (e) {}
+
+  // 2. Fallback to /edit endpoint (WLED LittleFS editor)
+  try {
+    const fd = new FormData();
+    fd.append('data', blob, filename);
+    const res = await fetch(`http://${ip}/edit`, {
+      method: 'POST',
+      body: fd,
+      signal: AbortSignal.timeout(4000)
+    });
+    if (res.ok) return true;
+  } catch (e) {}
+
+  return false;
+}
+
 async function directPushLedmapToWled() {
   const ipInput = document.getElementById('wledIpAddress');
   const ip = ipInput ? ipInput.value.trim() : AppState.wledHardware.ip;
@@ -1085,21 +1191,15 @@ async function directPushLedmapToWled() {
   const totalLeds = AppState.cachedLeds.length;
   showToast(`🚀 Auto-Configuring WLED at http://${ip}...`);
 
-  // Step 1: Upload ledmap.json to /edit
-  const jsonContent = Exporters.wledLedmap();
-  const formData = new FormData();
-  const blob = new Blob([jsonContent], { type: 'application/json' });
-  formData.append('data', blob, 'ledmap.json');
+  // Step 1: Upload ledmap.json to WLED
+  const contentLedmap = Exporters.wledLedmap();
+  await uploadFileToWled(ip, 'ledmap.json', contentLedmap);
 
-  try {
-    await fetch(`http://${ip}/edit`, {
-      method: 'POST',
-      body: formData,
-      signal: AbortSignal.timeout(5000)
-    });
-  } catch (err) {}
+  // Step 2: Upload 2d.json to WLED (Configures Native 2D Matrix Setup)
+  const content2d = Exporters.wled2dJson();
+  await uploadFileToWled(ip, '2d.json', content2d);
 
-  // Step 2: Update cfg.json directly (fetch existing /cfg.json, update LED count, and upload back to /edit)
+  // Step 3: Fetch existing /cfg.json, update LED total to 169, and upload back
   try {
     const cfgRes = await fetch(`http://${ip}/cfg.json`, { signal: AbortSignal.timeout(3000) });
     if (cfgRes.ok) {
@@ -1109,21 +1209,12 @@ async function directPushLedmapToWled() {
         if (Array.isArray(cfg.hw.led.ins) && cfg.hw.led.ins.length > 0) {
           cfg.hw.led.ins[0].len = totalLeds;
         }
-        
-        const cfgBlob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
-        const cfgFormData = new FormData();
-        cfgFormData.append('data', cfgBlob, 'cfg.json');
-        
-        await fetch(`http://${ip}/edit`, {
-          method: 'POST',
-          body: cfgFormData,
-          signal: AbortSignal.timeout(5000)
-        });
+        await uploadFileToWled(ip, 'cfg.json', JSON.stringify(cfg, null, 2));
       }
     }
   } catch (e) {}
 
-  // Step 3: Auto-Configure WLED Hardware LED Count via /json/cfg endpoint
+  // Step 4: Configure WLED Hardware LED Count via /json/cfg endpoint
   try {
     await fetch(`http://${ip}/json/cfg`, {
       method: 'POST',
@@ -1139,7 +1230,11 @@ async function directPushLedmapToWled() {
     });
   } catch (e) {}
 
-  // Step 3: Expand Segment 0 to cover all LEDs, Power ON, and set 2D Plasma
+  // Step 5: Expand Segment 0 with 2D Matrix dimensions, Power ON, and set 2D Plasma
+  const matrix = AppState.cachedMatrix;
+  const matW = matrix ? matrix.width : 13;
+  const matH = matrix ? matrix.height : 13;
+
   try {
     await fetch(`http://${ip}/json/state`, {
       method: 'POST',
@@ -1151,6 +1246,8 @@ async function directPushLedmapToWled() {
           id: 0,
           start: 0,
           stop: totalLeds,
+          w: matW,
+          h: matH,
           on: true,
           bri: 255,
           fx: "Plasma",
@@ -1163,12 +1260,16 @@ async function directPushLedmapToWled() {
     });
   } catch (e) {}
 
+  // Step 6: Upload standalone web app (honeycomb.htm) to WLED filesystem
+  const contentHtml = Exporters.wledStandaloneHtml();
+  await uploadFileToWled(ip, 'honeycomb.htm', contentHtml, 'text/html');
+
   // HTTP GET fallback for power & segment reset
   const img = new Image();
   img.src = `http://${ip}/win&A=255&t=${Date.now()}`;
 
   setWledStatus(true, `Configured (${totalLeds} LEDs)`);
-  showToast(`✅ WLED Configured! ${totalLeds} LEDs enabled, ledmap.json uploaded & 2D Plasma active! 🚀`);
+  showToast(`✅ WLED Configured! ${totalLeds} LEDs active, 2D Plasma running! 🚀`);
 }
 
 // ==========================================================================
@@ -1527,6 +1628,44 @@ function renderMiniMatrix() {
 // 10. Exporter Generators (WLED ledmap.json, Segments, FastLED, xLights)
 // ==========================================================================
 const Exporters = {
+  wledStandaloneHtml() {
+    // Compress 169 LED objects into a ultra-compact flat array [x0,y0, x1,y1, ...] -> Only ~600 bytes!
+    const flatCoords = [];
+    AppState.cachedLeds.forEach(l => {
+      flatCoords.push(Math.round(l.x), Math.round(l.y));
+    });
+    const matrix = AppState.cachedMatrix;
+    const bounds = matrix ? matrix.bounds : { minX: -200, maxX: 200, minY: -200, maxY: 200, spanX: 400, spanY: 400 };
+
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Honeycomb FX</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui}body{background:#0b0f19;color:#fff;display:flex;flex-direction:column;align-items:center;padding:10px}.card{background:#0f172a;border:1px solid #334155;border-radius:14px;width:100%;max-width:400px;padding:12px}h1{font-size:15px;text-align:center;margin-bottom:8px;color:#00f2fe}canvas{width:100%;height:220px;background:#070a12;border-radius:8px;margin-bottom:8px}.row{margin-bottom:6px}label{display:block;font-size:10px;color:#94a3b8;margin-bottom:2px}select,input{width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:6px;border-radius:6px;font-size:12px}.btn{width:100%;padding:8px;border-radius:6px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#00f2fe;color:#000}.btn.active{background:#f72585;color:#fff}</style></head><body><div class="card"><h1>⬢ Honeycomb Live FX</h1><canvas id="c"></canvas><div class="row"><label>Effect</label><select id="fx"><option value="plasma_2d" selected>🌌 2D Plasma & Noise</option><option value="matrix_rain">💻 Matrix Rain</option><option value="galaxy_spiral">🌀 Spiral Galaxy</option><option value="neon_wave">⚡ Neon Wave</option><option value="fireworks">🎆 Fireworks</option><option value="starfield">✨ Starfield</option></select></div><div class="row"><label>Palette</label><select id="pal"><option value="cyberpunk" selected>Cyberpunk</option><option value="rainbow">Rainbow</option><option value="ocean">Ocean</option><option value="fire">Fire</option></select></div><div class="row"><label>Brightness</label><input type="range" id="bri" min="10" max="255" value="255"></div><button class="btn active" id="syncBtn">⏹ Pause Live WiFi Streaming</button></div><script>var flat=${JSON.stringify(flatCoords)};var bounds=${JSON.stringify(bounds)};var leds=[];for(var i=0;i<flat.length;i+=2){leds.push({x:flat[i],y:flat[i+1],i:i/2});}var totalLeds=leds.length,cvs=document.getElementById('c'),ctx=cvs.getContext('2d');cvs.width=cvs.clientWidth||300;cvs.height=cvs.clientHeight||220;var isSyncing=true,effect='plasma_2d',palette='cyberpunk',brightness=1.0,time=0,lastTime=Date.now();function palFn(t){t=(t%1+1)%1;if(palette==='rainbow')return[Math.abs(Math.round(255*Math.sin(t*6.28))),Math.abs(Math.round(255*Math.sin(t*6.28+2))),Math.abs(Math.round(255*Math.sin(t*6.28+4)))];if(palette==='ocean')return[Math.round(14+t*31),Math.round(165+t*47),Math.round(233-t*42)];if(palette==='fire')return[255,Math.round(t*200),Math.round(t*50)];return[Math.round(t*247),Math.round(242-t*205),Math.round(254-t*121)]}document.getElementById('fx').onchange=function(e){effect=e.target.value};document.getElementById('pal').onchange=function(e){palette=e.target.value};document.getElementById('bri').oninput=function(e){brightness=e.target.value/255};var syncBtn=document.getElementById('syncBtn');syncBtn.onclick=function(){isSyncing=!isSyncing;syncBtn.textContent=isSyncing?'⏹ Pause Live WiFi Streaming':'⚡ Stream Live FX to Panel';syncBtn.className=isSyncing?'btn active':'btn'};function loop(){var now=Date.now(),dt=Math.min(0.1,(now-lastTime)/1000);lastTime=now;time+=dt;ctx.clearRect(0,0,cvs.width,cvs.height);var spanX=bounds.spanX||1,spanY=bounds.spanY||1,minX=bounds.minX||0,minY=bounds.minY||0,hexColors=[],scale=Math.min((cvs.width-30)/spanX,(cvs.height-30)/spanY),offsetX=cvs.width/2,offsetY=cvs.height/2;for(var k=0;k<leds.length;k++){var l=leds[k],r=0,g=0,b=0,nx=(l.x-minX)/spanX,ny=(l.y-minY)/spanY;if(effect==='plasma_2d'){var v=Math.sin(nx*5+time*2)+Math.sin(ny*5+time*1.5);var rgb=palFn((v+2)/4);r=rgb[0];g=rgb[1];b=rgb[2]}else if(effect==='matrix_rain'){var drop=(ny+Math.sin(nx*10)*0.3+time*1.2)%1;if(drop<0)drop+=1;if(drop>0.8){r=180;g=255;b=200}else if(drop>0.2){r=0;g=Math.round(255*(drop-0.2)/0.6);b=100}else{r=0;g=20;b=5}}else if(effect==='galaxy_spiral'){var angle=Math.atan2(l.y,l.x),dist=Math.hypot(l.x,l.y),rgbG=palFn((Math.sin(angle*2+dist*0.03-time*2)+1)/2);r=rgbG[0];g=rgbG[1];b=rgbG[2]}else{var rgbD=palFn((l.i/totalLeds+time*0.5)%1);r=rgbD[0];g=rgbD[1];b=rgbD[2]}r=Math.round(r*brightness);g=Math.round(g*brightness);b=Math.round(b*brightness);var rH=r.toString(16).padStart(2,'0'),gH=g.toString(16).padStart(2,'0'),bH=b.toString(16).padStart(2,'0');hexColors.push((rH+gH+bH).toUpperCase());var px=offsetX+l.x*scale,py=offsetY+l.y*scale;ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fillStyle='rgb('+r+','+g+','+b+')';ctx.fill()}if(isSyncing&&Math.floor(time*10)!==Math.floor((time-dt)*10)){var payload=[0].concat(hexColors);fetch('/json/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:true,bri:Math.round(brightness*255),seg:[{id:0,fx:0,i:payload}]})}).catch(function(){})}requestAnimationFrame(loop)}requestAnimationFrame(loop)<\/script></body></html>`;
+  },
+
+  wled2dJson() {
+    const matrix = AppState.cachedMatrix;
+    const w = matrix ? matrix.width : 13;
+    const h = matrix ? matrix.height : 13;
+
+    const obj = {
+      matrix: {
+        w: w,
+        h: h
+      },
+      panels: [
+        {
+          b: false,
+          r: false,
+          v: false,
+          s: false,
+          x: 0,
+          y: 0,
+          w: w,
+          h: h
+        }
+      ]
+    };
+    return JSON.stringify(obj, null, 2);
+  },
+
   wledLedmap() {
     const matrix = AppState.cachedMatrix;
     if (!matrix) return '{}';

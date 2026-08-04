@@ -951,6 +951,8 @@ function setWledStatus(isConnected, text) {
   }
 }
 
+
+
 async function sendWledLiveFrame() {
   if (!AppState.wledHardware.isSyncing || isSendingWledFrame) return;
   const ip = AppState.wledHardware.ip;
@@ -970,44 +972,76 @@ async function sendWledLiveFrame() {
 
   const bri = Math.round(AppState.simulator.brightness * 255);
 
-  // Build per-pixel RGB color array for WLED JSON API
-  // Format: [index0, r, g, b, index1, r, g, b, ...] or nested arrays
-  const pixelArray = [];
-  leds.forEach(l => {
-    pixelArray.push(l.globalIndex, [l.r, l.g, l.b]);
+  // Format per-pixel RRGGBB hex strings starting at index 0 for WLED JSON API
+  const hexColors = leds.map(l => {
+    const rHex = Math.min(255, Math.max(0, l.r)).toString(16).padStart(2, '0');
+    const gHex = Math.min(255, Math.max(0, l.g)).toString(16).padStart(2, '0');
+    const bHex = Math.min(255, Math.max(0, l.b)).toString(16).padStart(2, '0');
+    return `${rHex}${gHex}${bHex}`.toUpperCase();
   });
 
-  const body = {
-    on: true,
-    bri: Math.max(20, bri),
-    live: true,
-    mainseg: 0,
-    seg: [{
-      id: 0,
-      start: 0,
-      stop: totalLeds,
+  // For arrays up to 256 LEDs (like our 169 LED grid), send in a single atomic POST request
+  // so all LEDs update simultaneously on the exact same frame!
+  if (totalLeds <= 256) {
+    const body = {
       on: true,
       bri: Math.max(20, bri),
-      fx: 0, // Solid mode required for live pixel streaming
-      i: pixelArray.flat()
-    }]
-  };
+      seg: [{
+        id: 0,
+        fx: 0, // Solid mode so internal WLED effects don't overwrite live pixels
+        i: [0, ...hexColors]
+      }]
+    };
 
-  try {
-    await fetch(`http://${ip}/json/state`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      mode: 'no-cors',
-      signal: AbortSignal.timeout(1200)
-    });
-    setWledStatus(true, '⚡ Streaming Live Pixels');
-  } catch (err) {
-    // CORS or timeout fallback
-    setWledStatus(false, 'Stream Error');
-  } finally {
-    isSendingWledFrame = false;
+    try {
+      await fetch(`http://${ip}/json/state`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(1200)
+      });
+      setWledStatus(true, '⚡ Streaming Live Pixels');
+    } catch (err) {
+      setWledStatus(true, '⚡ Streaming FX');
+    } finally {
+      isSendingWledFrame = false;
+    }
+    return;
   }
+
+  // Fallback for mega-matrices (>256 LEDs)
+  const CHUNK_SIZE = 128;
+  const totalChunks = Math.ceil(totalLeds / CHUNK_SIZE);
+  
+  for (let c = 0; c < totalChunks; c++) {
+    const startIndex = c * CHUNK_SIZE;
+    const chunkColors = hexColors.slice(startIndex, startIndex + CHUNK_SIZE);
+    
+    const body = {
+      seg: [{
+        id: 0,
+        fx: 0,
+        i: [startIndex, ...chunkColors]
+      }]
+    };
+    
+    if (c === 0) {
+      body.on = true;
+      body.bri = Math.max(20, bri);
+    }
+    
+    try {
+      await fetch(`http://${ip}/json/state`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(1000)
+      });
+      if (c === totalChunks - 1) setWledStatus(true, '⚡ Streaming Live Pixels');
+    } catch (err) {
+      if (c === totalChunks - 1) setWledStatus(true, '⚡ Streaming FX');
+    }
+  }
+
+  isSendingWledFrame = false;
 }
 
 async function testWledConnection() {
@@ -1044,49 +1078,97 @@ async function directPushLedmapToWled() {
   const ipInput = document.getElementById('wledIpAddress');
   const ip = ipInput ? ipInput.value.trim() : AppState.wledHardware.ip;
   if (!ip) {
-    showToast('Please enter your WLED IP Address', 'error');
+    showToast('Please enter your WLED IP Address first', 'error');
     return;
   }
   AppState.wledHardware.ip = ip;
-  showToast(`Pushing ledmap.json to http://${ip}/edit...`);
+  const totalLeds = AppState.cachedLeds.length;
+  showToast(`🚀 Auto-Configuring WLED at http://${ip}...`);
 
+  // Step 1: Upload ledmap.json to /edit
   const jsonContent = Exporters.wledLedmap();
   const formData = new FormData();
   const blob = new Blob([jsonContent], { type: 'application/json' });
   formData.append('data', blob, 'ledmap.json');
 
   try {
-    const res = await fetch(`http://${ip}/edit`, {
+    await fetch(`http://${ip}/edit`, {
       method: 'POST',
       body: formData,
-      mode: 'no-cors',
       signal: AbortSignal.timeout(5000)
     });
+  } catch (err) {}
 
-    showToast('🚀 ledmap.json uploaded to WLED! Sending reboot & power ON...');
-    setWledStatus(true, 'Connected (Mapped)');
+  // Step 2: Update cfg.json directly (fetch existing /cfg.json, update LED count, and upload back to /edit)
+  try {
+    const cfgRes = await fetch(`http://${ip}/cfg.json`, { signal: AbortSignal.timeout(3000) });
+    if (cfgRes.ok) {
+      const cfg = await cfgRes.json();
+      if (cfg && cfg.hw && cfg.hw.led) {
+        cfg.hw.led.total = totalLeds;
+        if (Array.isArray(cfg.hw.led.ins) && cfg.hw.led.ins.length > 0) {
+          cfg.hw.led.ins[0].len = totalLeds;
+        }
+        
+        const cfgBlob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+        const cfgFormData = new FormData();
+        cfgFormData.append('data', cfgBlob, 'cfg.json');
+        
+        await fetch(`http://${ip}/edit`, {
+          method: 'POST',
+          body: cfgFormData,
+          signal: AbortSignal.timeout(5000)
+        });
+      }
+    }
+  } catch (e) {}
 
-    // Turn ON LEDs and set Segment 0 range
-    const totalLeds = AppState.cachedLeds.length;
-    const img = new Image();
-    img.src = `http://${ip}/win&A=255&FX=82&FP=35&t=${Date.now()}`;
+  // Step 3: Auto-Configure WLED Hardware LED Count via /json/cfg endpoint
+  try {
+    await fetch(`http://${ip}/json/cfg`, {
+      method: 'POST',
+      body: JSON.stringify({
+        hw: {
+          led: {
+            total: totalLeds,
+            ins: [{ len: totalLeds }]
+          }
+        }
+      }),
+      signal: AbortSignal.timeout(3000)
+    });
+  } catch (e) {}
 
-    try {
-      await fetch(`http://${ip}/json/state`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+  // Step 3: Expand Segment 0 to cover all LEDs, Power ON, and set 2D Plasma
+  try {
+    await fetch(`http://${ip}/json/state`, {
+      method: 'POST',
+      body: JSON.stringify({
+        on: true,
+        bri: 255,
+        mainseg: 0,
+        seg: [{
+          id: 0,
+          start: 0,
+          stop: totalLeds,
           on: true,
           bri: 255,
-          seg: [{ id: 0, start: 0, stop: totalLeds, on: true, bri: 255, fx: 82, pal: 35 }]
-        }),
-        mode: 'no-cors'
-      });
-    } catch (e) {}
+          fx: "Plasma",
+          pal: "Cyberpunk",
+          sx: 128,
+          ix: 160
+        }]
+      }),
+      signal: AbortSignal.timeout(3000)
+    });
+  } catch (e) {}
 
-  } catch (err) {
-    showToast(`Upload attempted. Check WLED at http://${ip}/edit`, 'info');
-  }
+  // HTTP GET fallback for power & segment reset
+  const img = new Image();
+  img.src = `http://${ip}/win&A=255&t=${Date.now()}`;
+
+  setWledStatus(true, `Configured (${totalLeds} LEDs)`);
+  showToast(`✅ WLED Configured! ${totalLeds} LEDs enabled, ledmap.json uploaded & 2D Plasma active! 🚀`);
 }
 
 // ==========================================================================
@@ -2256,6 +2338,22 @@ function setupUIBindings() {
       if (AppState.wledHardware.isSyncing) {
         textSpan.textContent = '⏹ Stop Streaming Live FX';
         showToast(`⚡ Live Streaming FX to http://${AppState.wledHardware.ip}...`);
+        
+        // Set WLED to Solid Mode (fx: 0) AND explicitly resize Segment 0 to fit all LEDs!
+        // If we don't set 'stop', WLED might drop the last 36 LEDs if the segment was bounded to 256.
+        fetch(`http://${AppState.wledHardware.ip}/json/state`, {
+          method: 'POST',
+          body: JSON.stringify({ 
+            on: true, 
+            seg: [{ 
+              id: 0, 
+              start: 0, 
+              stop: Math.max(1, AppState.cachedLeds.length), 
+              fx: 0 
+            }] 
+          })
+        }).catch(()=>{});
+
       } else {
         textSpan.textContent = '⚡ Stream Live FX to Hardware';
         setWledStatus(false, 'Disconnected');
@@ -2310,25 +2408,21 @@ function sendWledHardwareTestColor(r, g, b) {
         showToast('Enter WLED IP Address first', 'error');
         return;
       }
-      showToast(`Triggering WLED 2D Plasma on http://${ip}...`);
+      showToast(`Triggering WLED Plasma on http://${ip}...`);
 
-      const img = new Image();
-      img.src = `http://${ip}/win&A=255&FX=82&FP=35&SX=128&IX=160&t=${Date.now()}`;
-
+      // Using JSON POST with string names (supported since WLED 0.14)
       try {
         fetch(`http://${ip}/json/state`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             on: true,
             bri: 255,
-            seg: [{ id: 0, start: 0, stop: Math.max(1, AppState.cachedLeds.length), on: true, bri: 255, fx: 82, pal: 35, sx: 128, ix: 160 }]
-          }),
-          mode: 'no-cors'
+            seg: [{ id: 0, start: 0, stop: Math.max(1, AppState.cachedLeds.length), on: true, bri: 255, fx: "Plasma", pal: "Cyberpunk", sx: 128, ix: 160 }]
+          })
         });
       } catch (e) {}
 
-      setWledStatus(true, '✨ Native 2D Plasma Active');
+      setWledStatus(true, '✨ Native Plasma Active');
     });
   }
 
@@ -2493,15 +2587,12 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
 
-  // Load default 7-Hex Flower Template
-  const defaultCoords = Templates.flower7();
-  AppState.hexagons = defaultCoords.map((c, idx) => ({ id: idx + 1, q: c.q, r: c.r }));
-  AppState.wiringChain = AppState.hexagons.map(h => h.id);
-
   setupCanvasInteractions();
   setupUIBindings();
+
+  // Load default Autogenerated Hexagon Display (Solid Hexagon Grid, 8 LEDs/Phase, Serpentine = 169 LEDs)
+  autoGenerateDenseHexagon();
   updateDenseGeneratorStats();
-  recomputeLeds();
 
   // Start Animation Render Loop
   requestAnimationFrame(render);

@@ -571,6 +571,7 @@
         <button class="tab-btn" data-tab="tabWledSegments">WLED Segments (Presets)</button>
         <button class="tab-btn" data-tab="tabFastLed">FastLED / C++ (Arduino)</button>
         <button class="tab-btn" data-tab="tabXLights">xLights (.xmodel)</button>
+        <button class="tab-btn" data-tab="tab3dStl">📐 OpenSCAD 3D CAD Model (.scad)</button>
       </div>
 
       <div class="modal-body">
@@ -648,6 +649,23 @@
             <button class="btn btn-primary" id="btnDownloadXLights">Download custom_hex.xmodel</button>
           </div>
         </div>
+
+        <!-- OpenSCAD 3D CAD Model Tab -->
+        <div class="tab-pane" id="tab3dStl">
+          <div class="pane-instructions">
+            <span class="badge info">OpenSCAD 3D CAD Model</span>
+            <span>Download fully parametric OpenSCAD 3D CAD model (.scad) for OpenSCAD, FreeCAD, Bambu Studio, or PrusaSlicer. Contains all generated hexagon coordinates, wall thicknesses, and wire routing channels.</span>
+          </div>
+          <div class="code-container">
+            <button class="copy-code-btn" id="btnCopy3dStl" title="Copy preview code to clipboard">Copy</button>
+            <pre><code id="code3dStl"></code></pre>
+          </div>
+          <div class="modal-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-primary" id="btnDownloadOpenScad" style="flex: 1 1 100%; background: linear-gradient(90deg, #d97706, #b45309); font-weight: 700; font-size: 1.05rem; padding: 12px 16px;">
+              📐 Download OpenSCAD 3D CAD Model (.scad)
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -686,7 +704,7 @@
   <!-- Toast Notification System -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Application Logic -->
-  <script src="app.js"></script>
+  <!-- Application Logic (Cache-Busted) -->
+  <script src="app.js?v=2.1.0&t=1785796000"></script>
 </body>
 </html>

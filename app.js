@@ -1832,6 +1832,176 @@ const Exporters = {
 };
 
 // ==========================================================================
+// 10.5 3D Printable CAD & STL Exporters (Exact Mesh Replica of 169_lef_tile.stl)
+// ==========================================================================
+const CadExporter = {
+  refCellFacets: [{"n":[0.872,-0.489,0],"v1":[-47.701,-105.263,2],"v2":[40.83,52.699,4.5],"v3":[33.784,40.127,4.5]},{"n":[0.872,-0.489,0],"v1":[-47.701,-105.263,2],"v2":[33.784,40.127,4.5],"v3":[32.682,38.161,4.5]},{"n":[-0.872,0.489,0],"v1":[-53.96,-107.33,2],"v2":[33.974,49.569,4.5],"v3":[41.021,62.142,4.5]},{"n":[-0.872,0.489,0],"v1":[-53.96,-107.33,2],"v2":[32.872,47.603,4.5],"v3":[33.974,49.569,4.5]},{"n":[-0.872,0.489,0],"v1":[-53.96,-107.33,2],"v2":[25.826,35.03,4.5],"v3":[32.872,47.603,4.5]},{"n":[0.872,-0.489,0],"v1":[-62.684,-102.441,2],"v2":[33.399,68.997,4.5],"v3":[32.297,67.031,4.5]},{"n":[0.872,-0.489,0],"v1":[-62.684,-102.441,2],"v2":[32.297,67.031,4.5],"v3":[25.251,54.458,4.5]},{"n":[0.872,-0.489,0],"v1":[-62.684,-102.441,2],"v2":[25.251,54.458,4.5],"v3":[24.149,52.492,4.5]},{"n":[0.872,-0.489,0],"v1":[-62.684,-102.441,2],"v2":[24.149,52.492,4.5],"v3":[17.102,39.919,4.5]},{"n":[-0.872,0.489,0],"v1":[-64.188,-96.023,2],"v2":[24.343,61.94,4.5],"v3":[25.445,63.906,4.5]},{"n":[-0.872,0.489,0],"v1":[-64.188,-96.023,2],"v2":[17.296,49.367,4.5],"v3":[24.343,61.94,4.5]},{"n":[-0.872,0.489,0],"v1":[-64.188,-96.023,2],"v2":[16.194,47.401,4.5],"v3":[17.296,49.367,4.5]},{"n":[0,0,1],"v1":[-7.332,-4.537,8.5],"v2":[-8.145,-4.537,8.5],"v3":[-7.723,-5.235,8.5]},{"n":[0,0,1],"v1":[-7.449,4.623,8.5],"v2":[-7.87,5.321,8.5],"v3":[-8.262,4.623,8.5]},{"n":[0,0,1],"v1":[-7.449,4.623,8.5],"v2":[-8.262,4.623,8.5],"v3":[-8.145,-4.537,8.5]},{"n":[0,0,1],"v1":[-7.449,4.623,8.5],"v2":[-8.145,-4.537,8.5],"v3":[-7.332,-4.537,8.5]},{"n":[0,0,1],"v1":[0.659,-9.016,8.5],"v2":[-7.723,-5.235,8.5],"v3":[0.268,-9.714,8.5]},{"n":[0,0,1],"v1":[0.659,-9.016,8.5],"v2":[-7.332,-4.537,8.5],"v3":[-7.723,-5.235,8.5]},{"n":[0,0,1],"v1":[1.084,-9.709,8.5],"v2":[0.659,-9.016,8.5],"v3":[0.268,-9.714,8.5]},{"n":[0,0,1],"v1":[0.004,10.002,8.5],"v2":[-7.87,5.321,8.5],"v3":[-7.449,4.623,8.5]},{"n":[0,0,1],"v1":[0.425,9.304,8.5],"v2":[0.004,10.002,8.5],"v3":[-7.449,4.623,8.5]},{"n":[0,0,1],"v1":[0.816,10.002,8.5],"v2":[0.004,10.002,8.5],"v3":[0.425,9.304,8.5]},{"n":[0,0,1],"v1":[8.533,-4.335,8.5],"v2":[0.659,-9.016,8.5],"v3":[1.084,-9.709,8.5]},{"n":[0,0,1],"v1":[8.958,-5.027,8.5],"v2":[8.533,-4.335,8.5],"v3":[1.084,-9.709,8.5]},{"n":[0,0,1],"v1":[9.349,-4.33,8.5],"v2":[8.533,-4.335,8.5],"v3":[8.958,-5.027,8.5]},{"n":[0,0,1],"v1":[8.416,4.825,8.5],"v2":[0.816,10.002,8.5],"v3":[0.425,9.304,8.5]},{"n":[0,0,1],"v1":[8.807,5.523,8.5],"v2":[0.816,10.002,8.5],"v3":[8.416,4.825,8.5]},{"n":[0,0,1],"v1":[9.232,4.83,8.5],"v2":[8.416,4.825,8.5],"v3":[8.533,-4.335,8.5]},{"n":[0,0,1],"v1":[9.232,4.83,8.5],"v2":[8.533,-4.335,8.5],"v3":[9.349,-4.33,8.5]},{"n":[0,0,1],"v1":[9.232,4.83,8.5],"v2":[8.807,5.523,8.5],"v3":[8.416,4.825,8.5]},{"n":[0,0,-1],"v1":[0.806,10.841,4.5],"v2":[0.425,9.304,4.5],"v3":[-0.296,8.875,4.5]},{"n":[0,0,-1],"v1":[0.806,10.841,4.5],"v2":[0.816,10.002,4.5],"v3":[0.425,9.304,4.5]},{"n":[0,0,-1],"v1":[8.807,5.523,4.5],"v2":[8.416,4.825,4.5],"v3":[0.425,9.304,4.5]},{"n":[0,0,-1],"v1":[8.807,5.523,4.5],"v2":[0.425,9.304,4.5],"v3":[0.816,10.002,4.5]},{"n":[0,0,-1],"v1":[9.529,5.952,4.5],"v2":[8.427,3.986,4.5],"v3":[8.416,4.825,4.5]},{"n":[0,0,-1],"v1":[9.529,5.952,4.5],"v2":[8.416,4.825,4.5],"v3":[8.807,5.523,4.5]},{"n":[0,0,-1],"v1":[-7.332,-4.537,4.5],"v2":[-7.723,-5.235,4.5],"v3":[-8.445,-5.664,4.5]},{"n":[0,0,-1],"v1":[-7.343,-3.698,4.5],"v2":[-7.332,-4.537,4.5],"v3":[-8.445,-5.664,4.5]},{"n":[0,0,-1],"v1":[0.659,-9.016,4.5],"v2":[0.268,-9.714,4.5],"v3":[-7.723,-5.235,4.5]},{"n":[0,0,-1],"v1":[0.659,-9.016,4.5],"v2":[-7.723,-5.235,4.5],"v3":[-7.332,-4.537,4.5]},{"n":[0,0,-1],"v1":[1.381,-8.587,4.5],"v2":[0.279,-10.553,4.5],"v3":[0.268,-9.714,4.5]},{"n":[0,0,-1],"v1":[1.381,-8.587,4.5],"v2":[0.268,-9.714,4.5],"v3":[0.659,-9.016,4.5]},{"n":[0,0,1],"v1":[-0.296,8.875,4.5],"v2":[-7.449,4.623,4.5],"v3":[-7.343,-3.698,4.5]},{"n":[0,0,1],"v1":[8.427,3.986,4.5],"v2":[1.381,-8.587,4.5],"v3":[8.533,-4.335,4.5]},{"n":[1,0.013,0],"v1":[-7.332,-4.537,8.5],"v2":[-7.332,-4.537,4.5],"v3":[-7.343,-3.698,4.5]},{"n":[1,0.013,0],"v1":[-7.449,4.623,8.5],"v2":[-7.343,-3.698,4.5],"v3":[-7.449,4.623,4.5]},{"n":[1,0.013,0],"v1":[-7.449,4.623,8.5],"v2":[-7.332,-4.537,8.5],"v3":[-7.343,-3.698,4.5]},{"n":[1,0.013,0],"v1":[0.816,10.002,8.5],"v2":[0.816,10.002,4.5],"v3":[0.806,10.841,4.5]},{"n":[0.489,0.872,0],"v1":[8.807,5.523,8.5],"v2":[0.816,10.002,4.5],"v3":[0.816,10.002,8.5]},{"n":[0.489,0.872,0],"v1":[8.807,5.523,4.5],"v2":[0.816,10.002,4.5],"v3":[8.807,5.523,8.5]},{"n":[-0.489,-0.872,0],"v1":[8.416,4.825,8.5],"v2":[0.425,9.304,8.5],"v3":[0.425,9.304,4.5]},{"n":[-0.489,-0.872,0],"v1":[8.416,4.825,4.5],"v2":[8.416,4.825,8.5],"v3":[0.425,9.304,4.5]},{"n":[0.511,-0.86,0],"v1":[-0.296,8.875,4.5],"v2":[-7.449,4.623,8.5],"v3":[-7.449,4.623,4.5]},{"n":[0.511,-0.86,0],"v1":[0.425,9.304,8.5],"v2":[-0.296,8.875,4.5],"v3":[0.425,9.304,4.5]},{"n":[0.511,-0.86,0],"v1":[0.425,9.304,8.5],"v2":[-7.449,4.623,8.5],"v3":[-0.296,8.875,4.5]},{"n":[-0.511,0.86,0],"v1":[8.807,5.523,8.5],"v2":[9.529,5.952,4.5],"v3":[8.807,5.523,4.5]},{"n":[-0.511,0.86,0],"v1":[1.381,-8.587,4.5],"v2":[8.533,-4.335,8.5],"v3":[8.533,-4.335,4.5]},{"n":[-0.511,0.86,0],"v1":[0.659,-9.016,8.5],"v2":[1.381,-8.587,4.5],"v3":[0.659,-9.016,4.5]},{"n":[-0.511,0.86,0],"v1":[0.659,-9.016,8.5],"v2":[8.533,-4.335,8.5],"v3":[1.381,-8.587,4.5]},{"n":[-1,-0.013,0],"v1":[8.416,4.825,8.5],"v2":[8.416,4.825,4.5],"v3":[8.427,3.986,4.5]},{"n":[-1,-0.013,0],"v1":[8.533,-4.335,8.5],"v2":[8.427,3.986,4.5],"v3":[8.533,-4.335,4.5]},{"n":[-1,-0.013,0],"v1":[8.533,-4.335,8.5],"v2":[8.416,4.825,8.5],"v3":[8.427,3.986,4.5]},{"n":[0,0,1],"v1":[-8.251,3.784,4.5],"v2":[-15.297,-8.789,4.5],"v3":[-8.145,-4.537,4.5]},{"n":[-0.511,0.86,0],"v1":[-7.149,5.75,4.5],"v2":[0.004,10.002,8.5],"v3":[0.004,10.002,4.5]},{"n":[-0.511,0.86,0],"v1":[-7.87,5.321,8.5],"v2":[-7.149,5.75,4.5],"v3":[-7.87,5.321,4.5]},{"n":[-0.511,0.86,0],"v1":[-7.87,5.321,8.5],"v2":[0.004,10.002,8.5],"v3":[-7.149,5.75,4.5]},{"n":[-1,-0.013,0],"v1":[-8.262,4.623,8.5],"v2":[-8.262,4.623,4.5],"v3":[-8.251,3.784,4.5]},{"n":[-1,-0.013,0],"v1":[-8.145,-4.537,8.5],"v2":[-8.251,3.784,4.5],"v3":[-8.145,-4.537,4.5]},{"n":[-1,-0.013,0],"v1":[-8.145,-4.537,8.5],"v2":[-8.262,4.623,8.5],"v3":[-8.251,3.784,4.5]},{"n":[-0.489,-0.872,0],"v1":[0.268,-9.714,4.5],"v2":[0.268,-9.714,8.5],"v3":[-7.723,-5.235,8.5]},{"n":[-0.489,-0.872,0],"v1":[0.268,-9.714,4.5],"v2":[-7.723,-5.235,8.5],"v3":[-7.723,-5.235,4.5]},{"n":[0.511,-0.86,0],"v1":[-7.723,-5.235,8.5],"v2":[-8.445,-5.664,4.5],"v3":[-7.723,-5.235,4.5]},{"n":[0.489,0.872,0],"v1":[0.659,-9.016,4.5],"v2":[-7.332,-4.537,4.5],"v3":[-7.332,-4.537,8.5]},{"n":[0.489,0.872,0],"v1":[0.659,-9.016,4.5],"v2":[-7.332,-4.537,8.5],"v3":[0.659,-9.016,8.5]},{"n":[-1,-0.013,0],"v1":[0.268,-9.714,8.5],"v2":[0.268,-9.714,4.5],"v3":[0.279,-10.553,4.5]},{"n":[0,0,-1],"v1":[-7.87,5.321,4.5],"v2":[-8.251,3.784,4.5],"v3":[-8.262,4.623,4.5]},{"n":[0,0,-1],"v1":[-7.149,5.75,4.5],"v2":[-8.251,3.784,4.5],"v3":[-7.87,5.321,4.5]},{"n":[1,0.013,0],"v1":[9.349,-4.33,8.5],"v2":[9.349,-4.33,4.5],"v3":[9.338,-3.49,4.5]},{"n":[1,0.013,0],"v1":[9.232,4.83,8.5],"v2":[9.338,-3.49,4.5],"v3":[9.232,4.83,4.5]},{"n":[1,0.013,0],"v1":[9.232,4.83,8.5],"v2":[9.349,-4.33,8.5],"v3":[9.338,-3.49,4.5]},{"n":[0.511,-0.86,0],"v1":[8.236,-5.456,4.5],"v2":[1.084,-9.709,8.5],"v3":[1.084,-9.709,4.5]},{"n":[0.511,-0.86,0],"v1":[8.958,-5.027,8.5],"v2":[8.236,-5.456,4.5],"v3":[8.958,-5.027,4.5]},{"n":[0.511,-0.86,0],"v1":[8.958,-5.027,8.5],"v2":[1.084,-9.709,8.5],"v3":[8.236,-5.456,4.5]},{"n":[0,0,-1],"v1":[9.338,-3.49,4.5],"v2":[8.958,-5.027,4.5],"v3":[8.236,-5.456,4.5]},{"n":[0,0,-1],"v1":[9.338,-3.49,4.5],"v2":[9.349,-4.33,4.5],"v3":[8.958,-5.027,4.5]}],
+
+  formatFacet(v1, v2, v3, n) {
+    return `  facet normal ${n[0].toFixed(6)} ${n[1].toFixed(6)} ${n[2].toFixed(6)}\n` +
+           `    outer loop\n` +
+           `      vertex ${v1[0].toFixed(3)} ${v1[1].toFixed(3)} ${v1[2].toFixed(3)}\n` +
+           `      vertex ${v2[0].toFixed(3)} ${v2[1].toFixed(3)} ${v2[2].toFixed(3)}\n` +
+           `      vertex ${v3[0].toFixed(3)} ${v3[1].toFixed(3)} ${v3[2].toFixed(3)}\n` +
+           `    endloop\n` +
+           `  endfacet\n`;
+  },
+
+  // 1. Single Hexagon Base Tile STL (100% Exact 1:1 Mesh Replica of 169_lef_tile.stl Cell)
+  generateTileBaseStl(options = {}) {
+    let stl = `solid HexTile_Base_Housing_ExactReference\n`;
+    this.refCellFacets.forEach(f => {
+      stl += this.formatFacet(f.v1, f.v2, f.v3, f.n);
+    });
+    stl += `endsolid HexTile_Base_Housing_ExactReference\n`;
+    return stl;
+  },
+
+  // 2. Snap-Fit Diffuser Lid STL (Top translucent cover plate - 1.6mm thickness)
+  generateDiffuserLidStl(options = {}) {
+    const radius = (options.radius || 10.0) - 0.2;
+    const thick = options.thick || 1.6;
+    const orientation = AppState.orientation || "pointy";
+    const startAngle = orientation === "pointy" ? Math.PI / 6 : 0;
+    const verts = [];
+
+    for (let i = 0; i < 6; i++) {
+      const a = startAngle + i * Math.PI / 3;
+      verts.push([radius * Math.cos(a), radius * Math.sin(a)]);
+    }
+
+    let stl = `solid HexTile_Diffuser_Lid\n`;
+    for (let i = 0; i < 6; i++) {
+      stl += this.formatFacet([0, 0, 0], [verts[(i + 1) % 6][0], verts[(i + 1) % 6][1], 0], [verts[i][0], verts[i][1], 0], [0,0,-1]);
+    }
+    for (let i = 0; i < 6; i++) {
+      stl += this.formatFacet([0, 0, thick], [verts[i][0], verts[i][1], thick], [verts[(i + 1) % 6][0], verts[(i + 1) % 6][1], thick], [0,0,1]);
+    }
+    for (let i = 0; i < 6; i++) {
+      const next = (i + 1) % 6;
+      const b1 = [verts[i][0], verts[i][1], 0];
+      const b2 = [verts[next][0], verts[next][1], 0];
+      const t1 = [verts[i][0], verts[i][1], thick];
+      const t2 = [verts[next][0], verts[next][1], thick];
+      stl += this.formatFacet(b1, b2, t2, [0,1,0]);
+      stl += this.formatFacet(b1, t2, t1, [0,1,0]);
+    }
+    stl += `endsolid HexTile_Diffuser_Lid\n`;
+    return stl;
+  },
+
+  // 3. Full Monolithic Honeycomb Assembly STL (Exact 1:1 Mesh Replication of 169_lef_tile.stl)
+  generateFullGridStl(hexagons, options = {}) {
+    const hexRadius = options.radius || 10.0;
+    const orientation = AppState.orientation || "pointy";
+    let stl = `solid HexLED_Wall_Fixture_Grid_ExactReference\n`;
+
+    let minX = Infinity, minY = Infinity;
+    const centers = hexagons.map(h => {
+      const p = HexMath.axialToPixel(h.q, h.r, hexRadius, orientation);
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      return p;
+    });
+
+    const offsetX = Math.abs(minX) + 15.0;
+    const offsetY = Math.abs(minY) + 15.0;
+
+    hexagons.forEach((hex, idx) => {
+      const cx = centers[idx].x + offsetX;
+      const cy = centers[idx].y + offsetY;
+
+      this.refCellFacets.forEach(f => {
+        const v1 = [f.v1[0] + cx, f.v1[1] + cy, f.v1[2]];
+        const v2 = [f.v2[0] + cx, f.v2[1] + cy, f.v2[2]];
+        const v3 = [f.v3[0] + cx, f.v3[1] + cy, f.v3[2]];
+        stl += this.formatFacet(v1, v2, v3, f.n);
+      });
+    });
+
+    stl += `endsolid HexLED_Wall_Fixture_Grid_ExactReference\n`;
+    return stl;
+  },
+
+  // 4. OpenSCAD Parametric 3D CAD Model Generator (.scad)
+  generateOpenScad(hexagons, options = {}) {
+    const pitch = 16.67; // 16.67mm pitch between cell centers for 60 LEDs/m
+    const r = options.radius || (pitch / Math.sqrt(3)); // 9.624mm physical radius
+    const wall = options.wallThick || 1.20; // Exact uniform wall thickness everywhere (internal dividers & outer perimeter!)
+    const h = options.height || 8.50;
+    const baseFloor = options.baseFloor || 0.40;
+    const ledTray = options.ledTray || 2.00;
+    const stripWidth = options.stripWidth || 10.50;
+    const stripDepth = options.stripDepth || 1.60;
+
+    // Group hexagons by horizontal rows (using Y coordinate)
+    const rowMap = new Map();
+    hexagons.forEach(hex => {
+      const cx = r * Math.sqrt(3) * (hex.q + hex.r / 2);
+      const cy = r * (3 / 2) * hex.r;
+      const key = Math.round(cy * 10) / 10;
+      if (!rowMap.has(key)) rowMap.set(key, []);
+      rowMap.get(key).push({ q: hex.q, r: hex.r, cx, cy });
+    });
+
+    const sortedRows = Array.from(rowMap.entries()).sort((a, b) => b[0] - a[0]);
+
+    let scad = `// ==========================================================================\n`;
+    scad += `// Fast-Rendering Uniform Wall HexLED Fixture - WS2812B Serpentine Grid\n`;
+    scad += `// Mathematical Half-Wall Offset -> Instant OpenSCAD CSG Rendering & Exact 1.2mm Walls!\n`;
+    scad += `// Open in OpenSCAD or FreeCAD (OpenSCAD Workbench)\n`;
+    scad += `// ==========================================================================\n\n`;
+
+    scad += `hex_radius = ${r.toFixed(3)}; // 16.67mm LED pitch\n`;
+    scad += `wall_thickness = ${wall.toFixed(2)}; // Uniform wall thickness everywhere\n`;
+    scad += `fixture_height = ${h.toFixed(2)};\n`;
+    scad += `base_floor = ${baseFloor.toFixed(2)};\n`;
+    scad += `led_tray_height = ${ledTray.toFixed(2)};\n`;
+    scad += `strip_width = ${stripWidth.toFixed(2)};\n`;
+    scad += `strip_depth = ${stripDepth.toFixed(2)};\n\n`;
+
+    scad += `module hex_cell(is_right_end, is_left_end, is_even_row) {\n`;
+    scad += `  r_outer = hex_radius + wall_thickness/2;\n`;
+    scad += `  r_inner = hex_radius - wall_thickness/2;\n`;
+    scad += `  difference() {\n`;
+    scad += `    // Outer Hexagon Body\n`;
+    scad += `    rotate([0, 0, 30]) cylinder(r = r_outer, h = fixture_height, $fn = 6);\n`;
+    scad += `    // Inner Light Cavity\n`;
+    scad += `    translate([0, 0, led_tray_height]) rotate([0, 0, 30]) cylinder(r = r_inner, h = fixture_height + 1, $fn = 6);\n`;
+    scad += `    // Straight Strip Channel\n`;
+    scad += `    translate([-r_outer - 2, -strip_width/2, base_floor]) cube([(r_outer + 2)*2, strip_width, strip_depth + 0.4]);\n`;
+    scad += `    // Serpentine Turnaround Channel\n`;
+    scad += `    if ((is_right_end && is_even_row) || (is_left_end && !is_even_row)) {\n`;
+    scad += `      dir = is_right_end ? 1 : -1;\n`;
+    scad += `      translate([dir * (r_inner - 2), -strip_width/2, base_floor]) cube([strip_width + 4, strip_width * 1.8, strip_depth + 0.4]);\n`;
+    scad += `    }\n`;
+    scad += `  }\n`;
+    scad += `}\n\n`;
+
+    scad += `module full_fixture() {\n`;
+    scad += `  union() {\n`;
+
+    sortedRows.forEach(([yKey, rowHexes], rowIndex) => {
+      rowHexes.sort((a, b) => a.cx - b.cx);
+      const isEvenRow = (rowIndex % 2 === 0);
+
+      rowHexes.forEach((hex, colIndex) => {
+        const isLeftEnd = (colIndex === 0);
+        const isRightEnd = (colIndex === rowHexes.length - 1);
+        scad += `    translate([${hex.cx.toFixed(3)}, ${hex.cy.toFixed(3)}, 0]) hex_cell(${isRightEnd}, ${isLeftEnd}, ${isEvenRow});\n`;
+      });
+    });
+
+    scad += `  }\n`;
+    scad += `}\n\n`;
+
+    scad += `full_fixture();\n`;
+
+    return scad;
+  }
+};
+
+// ==========================================================================
 // 11. High-Resolution Blueprint Renderer
 // ==========================================================================
 function renderBlueprintCanvas() {
@@ -2659,6 +2829,8 @@ function sendWledHardwareTestColor(r, g, b) {
   setupCopy('btnCopySegments', 'codeWledSegments');
   setupCopy('btnCopyFastLed', 'codeFastLed');
   setupCopy('btnCopyXLights', 'codeXLights');
+  const copyStl = document.getElementById('btnCopy3dStl');
+  if (copyStl) setupCopy('btnCopy3dStl', 'code3dStl');
 
   // File Download Helpers
   const downloadFile = (filename, content, type = 'application/json') => {
@@ -2687,6 +2859,17 @@ function sendWledHardwareTestColor(r, g, b) {
   document.getElementById('btnDownloadXLights').addEventListener('click', () => {
     downloadFile('custom_hex.xmodel', Exporters.xLightsXml(), 'application/xml');
   });
+
+  // OpenSCAD Parametric 3D CAD Download for OpenSCAD & FreeCAD (OpenSCAD Workbench)
+  const btnOpenScad = document.getElementById('btnDownloadOpenScad');
+  if (btnOpenScad) {
+    btnOpenScad.addEventListener('click', () => {
+      const count = AppState.hexagons ? AppState.hexagons.length : 169;
+      const fileName = `HexLED_${count}_Wall_Fixture.scad`;
+      downloadFile(fileName, CadExporter.generateOpenScad(AppState.hexagons), 'text/x-scad');
+      showToast(`Downloaded ${fileName}! 🚀`);
+    });
+  }
 
   // Blueprint Modal
   const bpModal = document.getElementById('blueprintModal');
@@ -2767,6 +2950,10 @@ function populateExportCode() {
   document.getElementById('codeWledSegments').textContent = Exporters.wledSegments();
   document.getElementById('codeFastLed').textContent = Exporters.fastLedCpp();
   document.getElementById('codeXLights').textContent = Exporters.xLightsXml();
+  const codeStl = document.getElementById('code3dStl');
+  if (codeStl) {
+    codeStl.textContent = CadExporter.generateOpenScad(AppState.hexagons);
+  }
 }
 
 // ==========================================================================

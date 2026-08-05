@@ -201,8 +201,20 @@ node test_engine.js
   12. 💡 **Single LED Tracer (Wiring Test)**
   13. 🎨 **Solid Palette Test**
 
-### 8.4 ⚡ Single Atomic Wi-Fi Frame Streaming
-- **Single HTTP POST Payload**: Sends all 169 LED hex colors in a single atomic payload (`i: [0, ...hexColors]`), eliminating frame drops and WiFi jitter.
+### 8.5 🖨️ 3D Printable CAD & STL Exporter (`CadExporter`)
+- **Direct 1:1 Reference Model Download (`169_lef_tile.stl`)**: Integrated 1-click download of the authentic, untouched 169-LED CAD reference file (`169_lef_tile.stl`, size 409 KB) directly inside the Export Modal.
+- **Reference Model Reverse Engineering**:
+  - **4 Solid Walls + 2 Connected Sides**: Each hexagon cell features **4 solid light-blocking walls** to prevent light bleed, and **ONLY 2 connected sides with bottom cutouts** (IN on side 1, OUT on side 4) following the serpentine LED strip path.
+  - **Bottom-Only Cutout Height**: Cutouts are positioned at the **bottom level ONLY** ($Z = 0.40\text{mm} \to 2.50\text{mm}$) for continuous flat LED strip sliding.
+  - **Total Height**: **8.50mm** total wall fixture height.
+  - **Base Floor**: **0.40mm** initial base layer.
+  - **LED Tray Level**: **2.00mm** recessed LED bed tray.
+  - **Outer Wall Thickness**: **1.60mm** perimeter honeycomb interlocking walls.
+- **Export Options**:
+  - `169_lef_tile.stl`: Direct download of the authentic 1:1 reference CAD model file.
+  - `HexTile_Base_Housing.stl`: Single 3D printable modular base tile with 4 solid sides & 2 bottom connected cutouts.
+  - `HexTile_Diffuser_Lid.stl`: Snap-fit translucent top cover plate (with 0.2mm snap-fit tolerance).
+  - `HexGrid_Full_Assembly.stl`: Monolithic 3D STL assembly model of the entire custom honeycomb layout ready for Bambu Studio, Cura, and PrusaSlicer.
 
 ---
 

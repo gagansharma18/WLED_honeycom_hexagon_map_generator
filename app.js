@@ -1931,7 +1931,7 @@ const CadExporter = {
     const h = options.height || 8.50;
     const baseFloor = options.baseFloor || 0.40;
     const ledTray = options.ledTray || 2.00;
-    const stripWidth = options.stripWidth || 10.50;
+    const stripWidth = options.stripWidth || (r - wall / 2);
     const stripDepth = options.stripDepth || 1.60;
 
     // Group hexagons by horizontal rows (using Y coordinate)
@@ -1957,23 +1957,24 @@ const CadExporter = {
     scad += `fixture_height = ${h.toFixed(2)};\n`;
     scad += `base_floor = ${baseFloor.toFixed(2)};\n`;
     scad += `led_tray_height = ${ledTray.toFixed(2)};\n`;
-    scad += `strip_width = ${stripWidth.toFixed(2)};\n`;
+    scad += `strip_width = ${stripWidth.toFixed(2)}; // Matches inner hexagon face width (${(r - wall / 2).toFixed(2)}mm)\n`;
     scad += `strip_depth = ${stripDepth.toFixed(2)};\n\n`;
 
     scad += `module hex_cell(is_right_end, is_left_end, is_even_row) {\n`;
     scad += `  r_outer = hex_radius + wall_thickness/2;\n`;
     scad += `  r_inner = hex_radius - wall_thickness/2;\n`;
+    scad += `  groove_width = r_inner; // LED groove face width matches hexagon face width exactly\n`;
     scad += `  difference() {\n`;
     scad += `    // Outer Hexagon Body\n`;
     scad += `    rotate([0, 0, 30]) cylinder(r = r_outer, h = fixture_height, $fn = 6);\n`;
     scad += `    // Inner Light Cavity\n`;
     scad += `    translate([0, 0, led_tray_height]) rotate([0, 0, 30]) cylinder(r = r_inner, h = fixture_height + 1, $fn = 6);\n`;
     scad += `    // Straight Strip Channel\n`;
-    scad += `    translate([-r_outer - 2, -strip_width/2, base_floor]) cube([(r_outer + 2)*2, strip_width, strip_depth + 0.4]);\n`;
+    scad += `    translate([-r_outer - 2, -groove_width/2, base_floor]) cube([(r_outer + 2)*2, groove_width, strip_depth + 0.4]);\n`;
     scad += `    // Serpentine Turnaround Channel\n`;
     scad += `    if ((is_right_end && is_even_row) || (is_left_end && !is_even_row)) {\n`;
     scad += `      dir = is_right_end ? 1 : -1;\n`;
-    scad += `      translate([dir * (r_inner - 2), -strip_width/2, base_floor]) cube([strip_width + 4, strip_width * 1.8, strip_depth + 0.4]);\n`;
+    scad += `      translate([dir * (r_inner - 2), -groove_width/2, base_floor]) cube([groove_width + 4, groove_width * 1.8, strip_depth + 0.4]);\n`;
     scad += `    }\n`;
     scad += `  }\n`;
     scad += `}\n\n`;

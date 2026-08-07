@@ -10,8 +10,6 @@ base_floor = 0.40;
 led_tray_height = 2.00;
 strip_width = hex_radius - wall_thickness/2; // LED groove width matches inner hexagon face width (9.024mm)
 strip_depth = 1.60;
-bottom_hole_width = 3.00; // Fixed wire cutout width along X axis (3mm)
-bottom_hole_height = hex_radius - wall_thickness/2; // Configurable wire cutout height along Y axis
 
 module hex_cell(is_right_end, is_left_end, is_even_row) {
   r_outer = hex_radius + wall_thickness/2;
@@ -48,14 +46,11 @@ module hex_cell(is_right_end, is_left_end, is_even_row) {
         cube([a_outer - a_inner + 0.2, groove_width, strip_depth + 0.4]);
     }
 
-    // 6. Bottom Plate Wire Cutout Holes (Start and end of each row)
-    if (is_left_end) {
-      translate([-a_inner, -bottom_hole_height/2, -0.1])
-        cube([bottom_hole_width, bottom_hole_height, base_floor + 0.2]);
-    }
-    if (is_right_end) {
-      translate([a_inner - bottom_hole_width, -bottom_hole_height/2, -0.1])
-        cube([bottom_hole_width, bottom_hole_height, base_floor + 0.2]);
+    // 6. Serpentine Turnaround Tunnel (Row ends only: cuts downwards into internal wall of row below)
+    if ((is_right_end && is_even_row) || (is_left_end && !is_even_row)) {
+      turn_x = is_right_end ? (a_inner - groove_width) : -a_inner;
+      translate([turn_x, -groove_width * 1.3, base_floor])
+        cube([groove_width, groove_width * 1.5, strip_depth + 0.4]);
     }
   }
 }

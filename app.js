@@ -1986,6 +1986,15 @@ const CadExporter = {
     scad += `      translate([-a_outer - 0.1, -groove_width/2, base_floor])\n`;
     scad += `        cube([a_outer - a_inner + 0.2, groove_width, strip_depth + 0.4]);\n`;
     scad += `    }\n`;
+    scad += `    // 6. Bottom Plate Wire Cutout Holes (Start and end of each row)\n`;
+    scad += `    if (is_left_end) {\n`;
+    scad += `      translate([-a_inner, -groove_width/2, -0.1])\n`;
+    scad += `        cube([groove_width, groove_width, base_floor + 0.2]);\n`;
+    scad += `    }\n`;
+    scad += `    if (is_right_end) {\n`;
+    scad += `      translate([a_inner - groove_width, -groove_width/2, -0.1])\n`;
+    scad += `        cube([groove_width, groove_width, base_floor + 0.2]);\n`;
+    scad += `    }\n`;
     scad += `  }\n`;
     scad += `}\n\n`;
 

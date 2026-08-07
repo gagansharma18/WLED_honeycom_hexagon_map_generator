@@ -45,6 +45,16 @@ module hex_cell(is_right_end, is_left_end, is_even_row) {
       translate([-a_outer - 0.1, -groove_width/2, base_floor])
         cube([a_outer - a_inner + 0.2, groove_width, strip_depth + 0.4]);
     }
+
+    // 6. Bottom Plate Wire Cutout Holes (Start and end of each row)
+    if (is_left_end) {
+      translate([-a_inner, -groove_width/2, -0.1])
+        cube([groove_width, groove_width, base_floor + 0.2]);
+    }
+    if (is_right_end) {
+      translate([a_inner - groove_width, -groove_width/2, -0.1])
+        cube([groove_width, groove_width, base_floor + 0.2]);
+    }
   }
 }
 

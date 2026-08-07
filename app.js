@@ -1934,7 +1934,7 @@ const CadExporter = {
     const stripWidth = options.stripWidth || (r - wall / 2);
     const stripDepth = options.stripDepth || 1.60;
 
-    const bottomHoleWidth = options.bottomHoleWidth || ((r - wall / 2) / 2);
+    const bottomHoleWidth = options.bottomHoleWidth || 3.00;
     const bottomHoleHeight = options.bottomHoleHeight || (r - wall / 2);
 
     // Group hexagons by horizontal rows (using Y coordinate)
@@ -1962,7 +1962,7 @@ const CadExporter = {
     scad += `led_tray_height = ${ledTray.toFixed(2)};\n`;
     scad += `strip_width = ${stripWidth.toFixed(2)}; // Matches inner hexagon face width (${(r - wall / 2).toFixed(2)}mm)\n`;
     scad += `strip_depth = ${stripDepth.toFixed(2)};\n`;
-    scad += `bottom_hole_width = ${bottomHoleWidth.toFixed(2)}; // Configurable wire cutout width along X axis (half width)\n`;
+    scad += `bottom_hole_width = ${bottomHoleWidth.toFixed(2)}; // Fixed wire cutout width along X axis (3mm)\n`;
     scad += `bottom_hole_height = ${bottomHoleHeight.toFixed(2)}; // Configurable wire cutout height along Y axis\n\n`;
 
     scad += `module hex_cell(is_right_end, is_left_end, is_even_row) {\n`;

@@ -10,7 +10,7 @@ base_floor = 0.40;
 led_tray_height = 2.00;
 strip_width = hex_radius - wall_thickness/2; // LED groove width matches inner hexagon face width (9.024mm)
 strip_depth = 1.60;
-bottom_hole_width = (hex_radius - wall_thickness/2) / 2; // Configurable wire cutout width along X axis (half width)
+bottom_hole_width = 3.00; // Fixed wire cutout width along X axis (3mm)
 bottom_hole_height = hex_radius - wall_thickness/2; // Configurable wire cutout height along Y axis
 
 module hex_cell(is_right_end, is_left_end, is_even_row) {

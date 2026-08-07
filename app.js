@@ -110,9 +110,19 @@ const AppState = {
   // Ordered array of hexagon IDs defining the daisy-chain wiring route
   wiringChain: [],
 
+  // Undo / Redo History Stack
+  undoStack: [],
+  redoStack: [],
+  maxHistory: 50,
+
   // Editor interaction state
-  currentTool: 'add', // 'add' | 'select' | 'wire' | 'delete'
+  currentTool: 'add', // 'add' | 'select' | 'boxselect' | 'wire' | 'delete'
   selectedHexId: null,
+  selectedHexIds: [], // Multi-selection array of hex IDs
+  clipboard: [], // Array of relative axial offsets [{dq, dr}] for copy/paste
+  customModules: [], // Saved frozen structures [{ id, name, count, hexes: [{dq, dr}] }]
+  placementModule: null, // Active custom module being attached [{dq, dr}]
+  boxSelect: { isSelecting: false, startX: 0, startY: 0, currentX: 0, currentY: 0 },
   hoverAxial: null,
   snapEnabled: true,
   showLedLabels: true,
@@ -1379,9 +1389,16 @@ function render(now = nowFn()) {
   // 4. Draw Individual LEDs & Glows
   drawLeds(ctx);
 
-  // 5. Draw Hover Snapping Ghost
-  if (AppState.hoverAxial && (AppState.currentTool === 'add' || AppState.currentTool === 'wire')) {
+  // 5. Draw Hover Snapping Ghost or Custom Module Attachment Ghost
+  if (AppState.placementModule && AppState.hoverAxial) {
+    drawGhostPlacement(ctx);
+  } else if (AppState.hoverAxial && (AppState.currentTool === 'add' || AppState.currentTool === 'wire')) {
     drawHoverGhost(ctx);
+  }
+
+  // 6. Draw Rubberband Box Selection Box
+  if (AppState.boxSelect && AppState.boxSelect.isSelecting) {
+    drawRubberbandBox(ctx);
   }
 
   ctx.restore();
@@ -1422,7 +1439,7 @@ function drawHexagons(ctx) {
   AppState.hexagons.forEach(hex => {
     const center = HexMath.axialToPixel(hex.q, hex.r, R, AppState.orientation);
     const corners = HexMath.getHexCorners(center.x, center.y, R, AppState.orientation);
-    const isSelected = hex.id === AppState.selectedHexId;
+    const isSelected = hex.id === AppState.selectedHexId || (AppState.selectedHexIds && AppState.selectedHexIds.includes(hex.id));
     const chainIdx = wiringIndexMap ? wiringIndexMap.get(hex.id) : -1;
     const led = isDense && hexLedMap ? hexLedMap.get(hex.id) : null;
 
@@ -1623,6 +1640,60 @@ function drawHoverGhost(ctx) {
   ctx.fillStyle = AppState.currentTool === 'add' ? 'rgba(0, 242, 254, 0.1)' : 'rgba(247, 37, 133, 0.1)';
   ctx.fill();
   ctx.stroke();
+  ctx.restore();
+}
+
+function drawGhostPlacement(ctx) {
+  const mod = AppState.placementModule;
+  const anchor = AppState.hoverAxial;
+  if (!mod || !anchor) return;
+
+  const R = AppState.hexRadius;
+  ctx.save();
+
+  mod.hexes.forEach(offset => {
+    const targetQ = anchor.q + offset.dq;
+    const targetR = anchor.r + offset.dr;
+    const existing = AppState.hexagons.find(h => h.q === targetQ && h.r === targetR);
+    const center = HexMath.axialToPixel(targetQ, targetR, R, AppState.orientation);
+    const corners = HexMath.getHexCorners(center.x, center.y, R, AppState.orientation);
+
+    ctx.beginPath();
+    corners.forEach((c, idx) => {
+      if (idx === 0) ctx.moveTo(c.x, c.y);
+      else ctx.lineTo(c.x, c.y);
+    });
+    ctx.closePath();
+
+    ctx.strokeStyle = existing ? 'rgba(247, 37, 133, 0.8)' : 'rgba(0, 242, 254, 0.85)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.fillStyle = existing ? 'rgba(247, 37, 133, 0.15)' : 'rgba(0, 242, 254, 0.2)';
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  ctx.restore();
+}
+
+function drawRubberbandBox(ctx) {
+  const box = AppState.boxSelect;
+  if (!box || !box.isSelecting) return;
+
+  const x1 = Math.min(box.startWorldX, box.currentWorldX);
+  const y1 = Math.min(box.startWorldY, box.currentWorldY);
+  const w = Math.abs(box.currentWorldX - box.startWorldX);
+  const h = Math.abs(box.currentWorldY - box.startWorldY);
+
+  const zoom = AppState.camera.zoom || 1.0;
+
+  ctx.save();
+  ctx.strokeStyle = '#00f2fe';
+  ctx.lineWidth = 1.8 / zoom;
+  ctx.setLineDash([5 / zoom, 5 / zoom]);
+  ctx.fillStyle = 'rgba(0, 242, 254, 0.15)';
+  ctx.fillRect(x1, y1, w, h);
+  ctx.strokeRect(x1, y1, w, h);
   ctx.restore();
 }
 
@@ -2366,6 +2437,302 @@ function showToast(msg, type = 'info') {
 }
 
 // ==========================================================================
+// 12.4 History Stack (Undo & Redo Engine)
+// ==========================================================================
+function pushHistoryState() {
+  const snapshot = {
+    hexagons: JSON.parse(JSON.stringify(AppState.hexagons)),
+    wiringChain: [...AppState.wiringChain]
+  };
+  AppState.undoStack.push(snapshot);
+  if (AppState.undoStack.length > AppState.maxHistory) {
+    AppState.undoStack.shift();
+  }
+  AppState.redoStack = [];
+  updateUndoRedoUI();
+}
+
+function undo() {
+  if (!AppState.undoStack || AppState.undoStack.length === 0) return;
+
+  const currentSnapshot = {
+    hexagons: JSON.parse(JSON.stringify(AppState.hexagons)),
+    wiringChain: [...AppState.wiringChain]
+  };
+  AppState.redoStack.push(currentSnapshot);
+
+  const prevSnapshot = AppState.undoStack.pop();
+  AppState.hexagons = prevSnapshot.hexagons;
+  AppState.wiringChain = prevSnapshot.wiringChain;
+
+  recomputeLeds();
+  updateInspectorUI();
+  updateSelectionUI();
+  updateUndoRedoUI();
+  showToast('↩️ Undone');
+}
+
+function redo() {
+  if (!AppState.redoStack || AppState.redoStack.length === 0) return;
+
+  const currentSnapshot = {
+    hexagons: JSON.parse(JSON.stringify(AppState.hexagons)),
+    wiringChain: [...AppState.wiringChain]
+  };
+  AppState.undoStack.push(currentSnapshot);
+
+  const nextSnapshot = AppState.redoStack.pop();
+  AppState.hexagons = nextSnapshot.hexagons;
+  AppState.wiringChain = nextSnapshot.wiringChain;
+
+  recomputeLeds();
+  updateInspectorUI();
+  updateSelectionUI();
+  updateUndoRedoUI();
+  showToast('↪️ Redone');
+}
+
+function updateUndoRedoUI() {
+  const btnUndo = document.getElementById('btnUndo');
+  const btnRedo = document.getElementById('btnRedo');
+  if (btnUndo) btnUndo.disabled = !AppState.undoStack || AppState.undoStack.length === 0;
+  if (btnRedo) btnRedo.disabled = !AppState.redoStack || AppState.redoStack.length === 0;
+}
+
+// ==========================================================================
+// 12.5 Multi-Select, Group Freezing, Custom Sub-Module Library & Copy/Paste
+// ==========================================================================
+function selectHex(id, isMulti = false) {
+  if (!id) {
+    clearSelection();
+    return;
+  }
+  if (!isMulti) {
+    AppState.selectedHexIds = [id];
+    AppState.selectedHexId = id;
+  } else {
+    const idx = AppState.selectedHexIds.indexOf(id);
+    if (idx !== -1) {
+      AppState.selectedHexIds.splice(idx, 1);
+    } else {
+      AppState.selectedHexIds.push(id);
+    }
+    AppState.selectedHexId = AppState.selectedHexIds.length > 0 ? AppState.selectedHexIds[AppState.selectedHexIds.length - 1] : null;
+  }
+  updateInspectorUI();
+  updateSelectionUI();
+}
+
+function clearSelection() {
+  AppState.selectedHexIds = [];
+  AppState.selectedHexId = null;
+  AppState.placementModule = null;
+  updateInspectorUI();
+  updateSelectionUI();
+}
+
+function selectAllHexes() {
+  AppState.selectedHexIds = AppState.hexagons.map(h => h.id);
+  AppState.selectedHexId = AppState.selectedHexIds[0] || null;
+  updateInspectorUI();
+  updateSelectionUI();
+  showToast(`Selected all ${AppState.selectedHexIds.length} hexagons`);
+}
+
+function deleteSelectedHexes() {
+  if (AppState.selectedHexIds.length === 0 && AppState.selectedHexId) {
+    AppState.selectedHexIds = [AppState.selectedHexId];
+  }
+  if (AppState.selectedHexIds.length === 0) return;
+
+  pushHistoryState();
+
+  const count = AppState.selectedHexIds.length;
+  const toDelete = new Set(AppState.selectedHexIds);
+  AppState.hexagons = AppState.hexagons.filter(h => !toDelete.has(h.id));
+  AppState.wiringChain = AppState.wiringChain.filter(id => !toDelete.has(id));
+  clearSelection();
+  recomputeLeds();
+  showToast(`Deleted ${count} hexagon(s)`);
+}
+
+function updateSelectionUI() {
+  const bar = document.getElementById('selectionActionBar');
+  const badge = document.getElementById('selectionCountBadge');
+  const count = AppState.selectedHexIds ? AppState.selectedHexIds.length : 0;
+
+  if (count > 0 && bar && badge) {
+    badge.textContent = `${count} Selected`;
+    bar.style.display = 'flex';
+  } else if (bar) {
+    bar.style.display = 'none';
+  }
+}
+
+function freezeSelection() {
+  if (!AppState.selectedHexIds || AppState.selectedHexIds.length === 0) {
+    showToast('Select hexagons first to freeze as a module', 'warning');
+    return;
+  }
+
+  const selectedHexes = AppState.hexagons.filter(h => AppState.selectedHexIds.includes(h.id));
+  if (selectedHexes.length === 0) return;
+
+  const name = prompt('Name your custom sub-module / frozen structure:', `hex${AppState.customModules.length + 1}`);
+  if (!name || !name.trim()) return;
+
+  // Calculate centroid / anchor
+  const avgQ = Math.round(selectedHexes.reduce((s, h) => s + h.q, 0) / selectedHexes.length);
+  const avgR = Math.round(selectedHexes.reduce((s, h) => s + h.r, 0) / selectedHexes.length);
+
+  const offsets = selectedHexes.map(h => ({ dq: h.q - avgQ, dr: h.r - avgR }));
+  const newModule = {
+    id: 'mod_' + Date.now(),
+    name: name.trim(),
+    count: offsets.length,
+    hexes: offsets
+  };
+
+  AppState.customModules.push(newModule);
+  saveCustomModulesToStorage();
+  renderCustomModulesList();
+  showToast(`❄️ Frozen shape "${newModule.name}" (${newModule.count} hexes)`);
+}
+
+function copySelection() {
+  if (!AppState.selectedHexIds || AppState.selectedHexIds.length === 0) {
+    showToast('Select hexagons to copy', 'warning');
+    return;
+  }
+  const selectedHexes = AppState.hexagons.filter(h => AppState.selectedHexIds.includes(h.id));
+  const avgQ = Math.round(selectedHexes.reduce((s, h) => s + h.q, 0) / selectedHexes.length);
+  const avgR = Math.round(selectedHexes.reduce((s, h) => s + h.r, 0) / selectedHexes.length);
+
+  AppState.clipboard = selectedHexes.map(h => ({ dq: h.q - avgQ, dr: h.r - avgR }));
+  showToast(`📋 Copied ${AppState.clipboard.length} hexagon(s) to clipboard`);
+}
+
+function pasteClipboard() {
+  if (!AppState.clipboard || AppState.clipboard.length === 0) {
+    showToast('Clipboard is empty', 'warning');
+    return;
+  }
+  AppState.placementModule = {
+    id: 'clip_' + Date.now(),
+    name: 'Pasted Block',
+    count: AppState.clipboard.length,
+    hexes: AppState.clipboard
+  };
+  showToast(`📄 Click canvas to attach pasted shape (${AppState.clipboard.length} hexes)`);
+}
+
+function duplicateSelection() {
+  if (!AppState.selectedHexIds || AppState.selectedHexIds.length === 0) return;
+  copySelection();
+  pasteClipboard();
+}
+
+function instantiateModule(modId) {
+  const mod = AppState.customModules.find(m => m.id === modId);
+  if (!mod) return;
+  AppState.placementModule = mod;
+  showToast(`✨ Click canvas to attach ${mod.name} (${mod.count} hexes)`);
+}
+
+function deleteCustomModule(modId) {
+  AppState.customModules = AppState.customModules.filter(m => m.id !== modId);
+  saveCustomModulesToStorage();
+  renderCustomModulesList();
+  showToast('Deleted custom module');
+}
+
+function attachModuleAt(anchorAxial, mod) {
+  if (!anchorAxial || !mod || !mod.hexes) return;
+
+  pushHistoryState();
+
+  const addedIds = [];
+  mod.hexes.forEach(offset => {
+    const targetQ = anchorAxial.q + offset.dq;
+    const targetR = anchorAxial.r + offset.dr;
+    const existing = AppState.hexagons.find(h => h.q === targetQ && h.r === targetR);
+    if (!existing) {
+      const nextId = AppState.hexagons.length > 0 ? Math.max(...AppState.hexagons.map(h => h.id)) + 1 : 1;
+      AppState.hexagons.push({ id: nextId, q: targetQ, r: targetR });
+      AppState.wiringChain.push(nextId);
+      addedIds.push(nextId);
+    }
+  });
+
+  AppState.placementModule = null;
+  if (addedIds.length > 0) {
+    AppState.selectedHexIds = addedIds;
+    AppState.selectedHexId = addedIds[0];
+    recomputeLeds();
+    updateInspectorUI();
+    updateSelectionUI();
+    showToast(`Attached ${mod.name} (+${addedIds.length} hexes)`);
+  } else {
+    showToast('All slots already occupied');
+  }
+}
+
+function saveCustomModulesToStorage() {
+  try {
+    localStorage.setItem('hexamap_custom_modules', JSON.stringify(AppState.customModules));
+  } catch (e) {}
+}
+
+function loadSavedCustomModules() {
+  try {
+    const data = localStorage.getItem('hexamap_custom_modules');
+    if (data) {
+      AppState.customModules = JSON.parse(data) || [];
+    }
+  } catch (e) {}
+  renderCustomModulesList();
+}
+
+function renderCustomModulesList() {
+  const listEl = document.getElementById('customModulesList');
+  if (!listEl) return;
+
+  if (!AppState.customModules || AppState.customModules.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state" style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 12px; border: 1px dashed var(--border-subtle); border-radius: var(--radius-md);">
+        Select hexagons and click <b>Freeze Selection</b> to save reusable shapes (e.g. hex1, hex2).
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = AppState.customModules.map(mod => `
+    <div class="custom-module-card">
+      <div class="module-header-row">
+        <div class="module-title-box">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+          <span class="module-name">${escapeHtml(mod.name)}</span>
+        </div>
+        <span class="module-badge">${mod.count} Hexes</span>
+      </div>
+      <div class="module-action-row">
+        <button class="btn-attach-action" onclick="instantiateModule('${mod.id}')" title="Attach shape to honeycomb grid">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Attach to Grid</span>
+        </button>
+        <button class="btn-delete-module" onclick="deleteCustomModule('${mod.id}')" title="Delete custom shape">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ==========================================================================
 // 13. Canvas Mouse & Touch Interaction
 // ==========================================================================
 function setupCanvasInteractions() {
@@ -2382,6 +2749,12 @@ function setupCanvasInteractions() {
       return;
     }
 
+    if (AppState.boxSelect && AppState.boxSelect.isSelecting) {
+      const world = screenToWorld(mx, my);
+      AppState.boxSelect.currentWorldX = world.x;
+      AppState.boxSelect.currentWorldY = world.y;
+    }
+
     const world = screenToWorld(mx, my);
     AppState.hoverAxial = HexMath.pixelToAxial(world.x, world.y, AppState.hexRadius, AppState.orientation);
   });
@@ -2391,7 +2764,7 @@ function setupCanvasInteractions() {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    if (e.button === 1 || e.button === 2 || (e.button === 0 && e.shiftKey)) {
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && e.altKey)) {
       // Pan Camera
       AppState.camera.isDragging = true;
       AppState.camera.dragStartX = mx;
@@ -2404,20 +2777,39 @@ function setupCanvasInteractions() {
       const axial = HexMath.pixelToAxial(world.x, world.y, AppState.hexRadius, AppState.orientation);
       const existing = AppState.hexagons.find(h => h.q === axial.q && h.r === axial.r);
 
+      // Handle placement mode (Attach custom module or pasted shape)
+      if (AppState.placementModule && AppState.hoverAxial) {
+        attachModuleAt(AppState.hoverAxial, AppState.placementModule);
+        return;
+      }
+
       if (AppState.currentTool === 'add') {
         if (!existing) {
+          pushHistoryState();
           const nextId = AppState.hexagons.length > 0 ? Math.max(...AppState.hexagons.map(h => h.id)) + 1 : 1;
           AppState.hexagons.push({ id: nextId, q: axial.q, r: axial.r });
           AppState.wiringChain.push(nextId);
-          AppState.selectedHexId = nextId;
+          selectHex(nextId, false);
           recomputeLeds();
           showToast(`Added Hexagon #${nextId}`);
         }
       } else if (AppState.currentTool === 'select') {
-        AppState.selectedHexId = existing ? existing.id : null;
-        updateInspectorUI();
+        if (existing) {
+          selectHex(existing.id, e.shiftKey);
+        } else if (!e.shiftKey) {
+          clearSelection();
+        }
+      } else if (AppState.currentTool === 'boxselect') {
+        AppState.boxSelect = {
+          isSelecting: true,
+          startWorldX: world.x,
+          startWorldY: world.y,
+          currentWorldX: world.x,
+          currentWorldY: world.y
+        };
       } else if (AppState.currentTool === 'wire') {
         if (existing) {
+          pushHistoryState();
           // If not in chain, append; if already in chain, re-order
           const idx = AppState.wiringChain.indexOf(existing.id);
           if (idx !== -1) {
@@ -2429,9 +2821,12 @@ function setupCanvasInteractions() {
         }
       } else if (AppState.currentTool === 'delete') {
         if (existing) {
+          pushHistoryState();
           AppState.hexagons = AppState.hexagons.filter(h => h.id !== existing.id);
           AppState.wiringChain = AppState.wiringChain.filter(id => id !== existing.id);
           if (AppState.selectedHexId === existing.id) AppState.selectedHexId = null;
+          AppState.selectedHexIds = AppState.selectedHexIds.filter(id => id !== existing.id);
+          updateSelectionUI();
           recomputeLeds();
           showToast(`Deleted Hexagon #${existing.id}`);
         }
@@ -2439,8 +2834,40 @@ function setupCanvasInteractions() {
     }
   });
 
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('mouseup', (e) => {
     AppState.camera.isDragging = false;
+
+    if (AppState.boxSelect && AppState.boxSelect.isSelecting) {
+      AppState.boxSelect.isSelecting = false;
+      const box = AppState.boxSelect;
+      const minX = Math.min(box.startWorldX, box.currentWorldX);
+      const maxX = Math.max(box.startWorldX, box.currentWorldX);
+      const minY = Math.min(box.startWorldY, box.currentWorldY);
+      const maxY = Math.max(box.startWorldY, box.currentWorldY);
+
+      const R = AppState.hexRadius;
+      const newlySelected = [];
+
+      AppState.hexagons.forEach(hex => {
+        const center = HexMath.axialToPixel(hex.q, hex.r, R, AppState.orientation);
+        if (center.x >= minX && center.x <= maxX && center.y >= minY && center.y <= maxY) {
+          newlySelected.push(hex.id);
+        }
+      });
+
+      if (newlySelected.length > 0) {
+        if (e.shiftKey) {
+          const set = new Set([...AppState.selectedHexIds, ...newlySelected]);
+          AppState.selectedHexIds = Array.from(set);
+        } else {
+          AppState.selectedHexIds = newlySelected;
+        }
+        AppState.selectedHexId = AppState.selectedHexIds[0];
+        updateInspectorUI();
+        updateSelectionUI();
+        showToast(`Selected ${AppState.selectedHexIds.length} hexagon(s)`);
+      }
+    }
   });
 
   canvas.addEventListener('wheel', (e) => {
@@ -2967,6 +3394,94 @@ function sendWledHardwareTestColor(r, g, b) {
     };
     reader.readAsText(file);
   });
+  // Sidebar Collapse / Expand Toggle
+  const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+  const leftSidebar = document.querySelector('.left-sidebar');
+  if (btnToggleSidebar && leftSidebar) {
+    const toggleSidebarFn = () => {
+      leftSidebar.classList.toggle('collapsed');
+      setTimeout(resizeCanvas, 320);
+      showToast(leftSidebar.classList.contains('collapsed') ? '📐 Full Canvas Design Mode (Sidebar Hidden)' : '📋 Sidebar Panel Expanded');
+    };
+    btnToggleSidebar.addEventListener('click', toggleSidebarFn);
+  }
+
+  // Collapsible Panel Section Accordion Headers
+  const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+  collapsibleHeaders.forEach(header => {
+    header.addEventListener('click', () => {
+      const section = header.closest('.panel-section');
+      if (section) {
+        section.classList.toggle('section-collapsed');
+      }
+    });
+  });
+
+  // Undo & Redo Button Bindings
+  const btnUndo = document.getElementById('btnUndo');
+  if (btnUndo) btnUndo.addEventListener('click', undo);
+  const btnRedo = document.getElementById('btnRedo');
+  if (btnRedo) btnRedo.addEventListener('click', redo);
+
+  // Selection Action Bar Bindings
+  const btnBarFreeze = document.getElementById('btnBarFreeze');
+  if (btnBarFreeze) btnBarFreeze.addEventListener('click', freezeSelection);
+  const btnBarCopy = document.getElementById('btnBarCopy');
+  if (btnBarCopy) btnBarCopy.addEventListener('click', copySelection);
+  const btnBarPaste = document.getElementById('btnBarPaste');
+  if (btnBarPaste) btnBarPaste.addEventListener('click', pasteClipboard);
+  const btnBarDuplicate = document.getElementById('btnBarDuplicate');
+  if (btnBarDuplicate) btnBarDuplicate.addEventListener('click', duplicateSelection);
+  const btnBarDelete = document.getElementById('btnBarDelete');
+  if (btnBarDelete) btnBarDelete.addEventListener('click', deleteSelectedHexes);
+  const btnBarClear = document.getElementById('btnBarClear');
+  if (btnBarClear) btnBarClear.addEventListener('click', clearSelection);
+
+  const btnFreeze = document.getElementById('btnFreezeSelection');
+  if (btnFreeze) btnFreeze.addEventListener('click', freezeSelection);
+
+  // Keyboard Shortcuts
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+    const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+
+    if (isCmdOrCtrl && e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      if (leftSidebar) {
+        leftSidebar.classList.toggle('collapsed');
+        setTimeout(resizeCanvas, 320);
+        showToast(leftSidebar.classList.contains('collapsed') ? '📐 Full Canvas Design Mode (Sidebar Hidden)' : '📋 Sidebar Panel Expanded');
+      }
+    } else if (isCmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      redo();
+    } else if (isCmdOrCtrl && e.key.toLowerCase() === 'y') {
+      e.preventDefault();
+      redo();
+    } else if (isCmdOrCtrl && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      undo();
+    } else if (isCmdOrCtrl && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      copySelection();
+    } else if (isCmdOrCtrl && e.key.toLowerCase() === 'v') {
+      e.preventDefault();
+      pasteClipboard();
+    } else if (isCmdOrCtrl && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      selectAllHexes();
+    } else if (isCmdOrCtrl && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      duplicateSelection();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      deleteSelectedHexes();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      clearSelection();
+    }
+  });
 }
 
 function populateExportCode() {
@@ -2990,6 +3505,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   setupCanvasInteractions();
   setupUIBindings();
+  loadSavedCustomModules();
 
   // Load default Autogenerated Hexagon Display (Solid Hexagon Grid, 8 LEDs/Phase, Serpentine = 169 LEDs)
   autoGenerateDenseHexagon();

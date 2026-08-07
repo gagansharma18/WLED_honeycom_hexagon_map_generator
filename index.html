@@ -98,236 +98,286 @@
     <aside class="sidebar left-sidebar">
       <!-- Toolbar Mode Selector -->
       <section class="panel-section">
-        <div class="section-title">Editor Tools</div>
-        <div class="tool-grid">
-          <button class="tool-btn active" data-tool="add" id="toolAdd" title="Click grid to add hexagons">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            <span>Add Hex</span>
-          </button>
-          <button class="tool-btn" data-tool="select" id="toolSelect" title="Select & configure hex">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
-            <span>Select</span>
-          </button>
-          <button class="tool-btn" data-tool="wire" id="toolWire" title="Click hexagons sequentially to define custom wiring chain">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-            <span>Wire Path</span>
-          </button>
-          <button class="tool-btn" data-tool="delete" id="toolDelete" title="Click hexagon to delete">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            <span>Delete</span>
-          </button>
+        <div class="section-title collapsible-header">
+          <span>Editor Tools</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        <div class="section-content">
+          <div class="tool-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <button class="tool-btn active" data-tool="add" id="toolAdd" title="Click grid to add hexagons">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <span>Add Hex</span>
+            </button>
+            <button class="tool-btn" data-tool="select" id="toolSelect" title="Select & configure hex">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
+              <span>Select</span>
+            </button>
+            <button class="tool-btn" data-tool="boxselect" id="toolBoxSelect" title="Drag rectangle on canvas to select multiple hexagons">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M7 7h10v10H7z" fill="currentColor" fill-opacity="0.2"/></svg>
+              <span>Box Select</span>
+            </button>
+            <button class="tool-btn" data-tool="wire" id="toolWire" title="Click hexagons sequentially to define custom wiring chain">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+              <span>Wire Path</span>
+            </button>
+            <button class="tool-btn" data-tool="delete" id="toolDelete" title="Click hexagon to delete">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>Delete</span>
+            </button>
+          </div>
         </div>
       </section>
 
       <!-- Display Architecture Mode -->
       <section class="panel-section">
-        <div class="section-title">Display Mode</div>
-        <div class="radio-card-group">
-          <label class="radio-card active" id="modeDenseLabel">
-            <input type="radio" name="displayMode" value="dense" checked id="modeDense">
-            <div class="card-content">
-              <span class="card-title">1 LED = 1 Hexagon Pixel (Default)</span>
-              <span class="card-desc">Each hexagon is 1 discrete pixel (Honeycomb LED Matrix)</span>
+        <div class="section-title collapsible-header">
+          <span>Display Mode</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        <div class="section-content">
+          <div class="radio-card-group">
+            <label class="radio-card active" id="modeDenseLabel">
+              <input type="radio" name="displayMode" value="dense" checked id="modeDense">
+              <div class="card-content">
+                <span class="card-title">1 LED = 1 Hexagon Pixel (Default)</span>
+                <span class="card-desc">Each hexagon is 1 discrete pixel (Honeycomb LED Matrix)</span>
+              </div>
+            </label>
+            <label class="radio-card" id="modeModularLabel">
+              <input type="radio" name="displayMode" value="modular" id="modeModular">
+              <div class="card-content">
+                <span class="card-title">Perimeter Panels</span>
+                <span class="card-desc">LEDs along outer hex edges (Nanoleaf / 3D strip modules)</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Custom Sub-Modules & Frozen Blocks -->
+      <section class="panel-section" id="customModulesSection">
+        <div class="section-title collapsible-header">
+          <span>❄️ Saved Sub-Modules</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        <div class="section-content">
+          <div class="btn-row" style="margin-bottom: 8px;">
+            <button class="btn btn-sm btn-secondary full-width" id="btnFreezeSelection" title="Save current selection as a reusable module (e.g. hex1)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+              <span>Freeze Selection</span>
+            </button>
+          </div>
+          <div id="customModulesList" class="custom-modules-list">
+            <div class="empty-state" style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 8px;">
+              Select hexes and click Freeze to save custom shapes (e.g., hex1, hex2).
             </div>
-          </label>
-          <label class="radio-card" id="modeModularLabel">
-            <input type="radio" name="displayMode" value="modular" id="modeModular">
-            <div class="card-content">
-              <span class="card-title">Perimeter Panels</span>
-              <span class="card-desc">LEDs along outer hex edges (Nanoleaf / 3D strip modules)</span>
-            </div>
-          </label>
+          </div>
         </div>
       </section>
 
       <!-- Hexagon Structure Auto-Generator (1 LED = 1 Hexagon) -->
       <section class="panel-section" id="denseGeneratorSection">
-        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="section-title collapsible-header">
           <span>⚡ Auto-Generate Hexagon</span>
-          <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); font-weight: 700;">1 LED = 1 Hex</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
-
-        <div class="form-row">
-          <label for="densePhaseLeds">LEDs / Hexagons per Phase</label>
-          <div class="number-input-group">
-            <button class="num-btn" id="btnDecDensePhase">-</button>
-            <input type="number" id="densePhaseLeds" min="2" max="30" value="8">
-            <button class="num-btn" id="btnIncDensePhase">+</button>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <label for="denseStructureType">Structure Pattern</label>
-          <select id="denseStructureType" class="btn-select full-width">
-            <option value="solid" selected>Solid Hexagon Grid (Filled Honeycomb Matrix)</option>
-            <option value="ring">Hollow Hexagon Ring (6 Phases with 1 Common Corner)</option>
-            <option value="nested">Double Concentric Rings (Outer + Inner)</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <label for="denseCornerMode">Corner Sharing</label>
-          <select id="denseCornerMode" class="btn-select full-width">
-            <option value="shared" selected>1 Common Corner LED per Vertex</option>
-            <option value="discrete">No Sharing (Discrete Strips)</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <label for="denseWiringPattern">Auto-Wiring Order</label>
-          <select id="denseWiringPattern" class="btn-select full-width">
-            <option value="serpentine" selected>Serpentine (S-Curve Zigzag Rows)</option>
-            <option value="perimeter">Perimeter Phase Order (Corner 0 → Corner 5)</option>
-            <option value="spiral">Spiral Inward (Ring by Ring)</option>
-          </select>
-        </div>
-
-        <div class="stat-badge-row">
-          <div class="stat-badge full-width" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px;">
-            <div style="display: flex; justify-content: space-between; width: 100%;">
-              <span class="badge-label">Generated LEDs:</span>
-              <span class="badge-val cyan" id="valDenseTotalLeds">42 LEDs</span>
-            </div>
-            <div style="font-size: 11px; color: var(--text-muted);" id="valDenseFormula">
-              6 Phases × 8 LEDs with 1 common corner LED = 42 Hexagons (42 LEDs)
+        <div class="section-content">
+          <div class="form-row">
+            <label for="densePhaseLeds">LEDs / Hexagons per Phase</label>
+            <div class="number-input-group">
+              <button class="num-btn" id="btnDecDensePhase">-</button>
+              <input type="number" id="densePhaseLeds" min="2" max="30" value="8">
+              <button class="num-btn" id="btnIncDensePhase">+</button>
             </div>
           </div>
-        </div>
 
-        <button class="btn btn-primary glow-btn full-width" id="btnAutoGenerateHex" style="margin-top: 8px;">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-          <span>⚡ Auto-Generate Hexagon</span>
-        </button>
+          <div class="form-row">
+            <label for="denseStructureType">Structure Pattern</label>
+            <select id="denseStructureType" class="btn-select full-width">
+              <option value="solid" selected>Solid Hexagon Grid (Filled Honeycomb Matrix)</option>
+              <option value="ring">Hollow Hexagon Ring (6 Phases with 1 Common Corner)</option>
+              <option value="nested">Double Concentric Rings (Outer + Inner)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="denseCornerMode">Corner Sharing</label>
+            <select id="denseCornerMode" class="btn-select full-width">
+              <option value="shared" selected>1 Common Corner LED per Vertex</option>
+              <option value="discrete">No Sharing (Discrete Strips)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="denseWiringPattern">Auto-Wiring Order</label>
+            <select id="denseWiringPattern" class="btn-select full-width">
+              <option value="serpentine" selected>Serpentine (S-Curve Zigzag Rows)</option>
+              <option value="perimeter">Perimeter Phase Order (Corner 0 → Corner 5)</option>
+              <option value="spiral">Spiral Inward (Ring by Ring)</option>
+            </select>
+          </div>
+
+          <div class="stat-badge-row">
+            <div class="stat-badge full-width" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px;">
+              <div style="display: flex; justify-content: space-between; width: 100%;">
+                <span class="badge-label">Generated LEDs:</span>
+                <span class="badge-val cyan" id="valDenseTotalLeds">42 LEDs</span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted);" id="valDenseFormula">
+                6 Phases × 8 LEDs with 1 common corner LED = 42 Hexagons (42 LEDs)
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary glow-btn full-width" id="btnAutoGenerateHex" style="margin-top: 8px;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span>⚡ Auto-Generate Hexagon</span>
+          </button>
+        </div>
       </section>
 
       <!-- Phase & Perimeter LED Geometry Settings -->
       <section class="panel-section" id="perimeterSettingsSection" style="display: none;">
-        <div class="section-title">Phase LED Configuration</div>
-        
-        <div class="form-row">
-          <label for="ledsPerPhase">LEDs per Phase (Side / Face)</label>
-          <div class="number-input-group">
-            <button class="num-btn" id="btnDecPhase">-</button>
-            <input type="number" id="ledsPerPhase" min="2" max="64" value="8">
-            <button class="num-btn" id="btnIncPhase">+</button>
-          </div>
+        <div class="section-title collapsible-header">
+          <span>Phase LED Configuration</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
-
-        <div class="form-row">
-          <label for="cornerSharingSelect">Corner Vertex Sharing</label>
-          <select id="cornerSharingSelect" class="btn-select full-width">
-            <option value="shared" selected>1 Common LED per Corner (Shared Vertex)</option>
-            <option value="discrete">No Sharing (Discrete Edge Strips)</option>
-          </select>
-        </div>
-
-        <div class="stat-badge-row">
-          <div class="stat-badge full-width" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px;">
-            <div style="display: flex; justify-content: space-between; width: 100%;">
-              <span class="badge-label">Total LEDs / Hex:</span>
-              <span class="badge-val cyan" id="valLedsPerHex">42 LEDs</span>
-            </div>
-            <div style="font-size: 11px; color: var(--text-muted);" id="valPhaseBreakdown">
-              6 Phases × 8 LEDs with 1 common corner LED = 42 LEDs
+        <div class="section-content">
+          <div class="form-row">
+            <label for="ledsPerPhase">LEDs per Phase (Side / Face)</label>
+            <div class="number-input-group">
+              <button class="num-btn" id="btnDecPhase">-</button>
+              <input type="number" id="ledsPerPhase" min="2" max="64" value="8">
+              <button class="num-btn" id="btnIncPhase">+</button>
             </div>
           </div>
-        </div>
 
-        <div class="form-row">
-          <label for="defaultStartCorner">Default Start Vertex</label>
-          <select id="defaultStartCorner" class="btn-select full-width">
-            <option value="0">Vertex 0 (Top / Top-Right)</option>
-            <option value="1">Vertex 1 (Right / Bottom-Right)</option>
-            <option value="2">Vertex 2 (Bottom-Right / Bottom)</option>
-            <option value="3">Vertex 3 (Bottom / Bottom-Left)</option>
-            <option value="4">Vertex 4 (Bottom-Left / Left)</option>
-            <option value="5">Vertex 5 (Top-Left)</option>
-          </select>
-        </div>
+          <div class="form-row">
+            <label for="cornerSharingSelect">Corner Vertex Sharing</label>
+            <select id="cornerSharingSelect" class="btn-select full-width">
+              <option value="shared" selected>1 Common LED per Corner (Shared Vertex)</option>
+              <option value="discrete">No Sharing (Discrete Edge Strips)</option>
+            </select>
+          </div>
 
-        <div class="form-row">
-          <label for="defaultDirection">LED Winding Direction</label>
-          <div class="segmented-control full-width" id="directionControl">
-            <button class="seg-btn active" data-dir="cw" id="btnDirCW">Clockwise ↻</button>
-            <button class="seg-btn" data-dir="ccw" id="btnDirCCW">Counter-CW ↺</button>
+          <div class="stat-badge-row">
+            <div class="stat-badge full-width" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px;">
+              <div style="display: flex; justify-content: space-between; width: 100%;">
+                <span class="badge-label">Total LEDs / Hex:</span>
+                <span class="badge-val cyan" id="valLedsPerHex">42 LEDs</span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted);" id="valPhaseBreakdown">
+                6 Phases × 8 LEDs with 1 common corner LED = 42 LEDs
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="defaultStartCorner">Default Start Vertex</label>
+            <select id="defaultStartCorner" class="btn-select full-width">
+              <option value="0">Vertex 0 (Top / Top-Right)</option>
+              <option value="1">Vertex 1 (Right / Bottom-Right)</option>
+              <option value="2">Vertex 2 (Bottom-Right / Bottom)</option>
+              <option value="3">Vertex 3 (Bottom / Bottom-Left)</option>
+              <option value="4">Vertex 4 (Bottom-Left / Left)</option>
+              <option value="5">Vertex 5 (Top-Left)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="defaultDirection">LED Winding Direction</label>
+            <div class="segmented-control full-width" id="directionControl">
+              <button class="seg-btn active" data-dir="cw" id="btnDirCW">Clockwise ↻</button>
+              <button class="seg-btn" data-dir="ccw" id="btnDirCCW">Counter-CW ↺</button>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- Auto Wiring Algorithms -->
       <section class="panel-section">
-        <div class="section-title">Auto-Wiring Route</div>
-        <div class="btn-row">
-          <button class="btn btn-sm btn-secondary" id="btnAutoWireSerpentine" title="Route rows alternately left-to-right & right-to-left">
-            Serpentine
-          </button>
-          <button class="btn btn-sm btn-secondary" id="btnAutoWireSpiral" title="Route in an outward spiral from center">
-            Spiral Out
-          </button>
-          <button class="btn btn-sm btn-secondary" id="btnAutoWireRadial" title="Route by distance from center hex">
-            Radial
-          </button>
+        <div class="section-title collapsible-header">
+          <span>Auto-Wiring Route</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
-        <div class="btn-row" style="margin-top: 8px;">
-          <button class="btn btn-sm btn-ghost danger-text" id="btnClearWiring">
-            Reset Wiring Order
-          </button>
-          <button class="btn btn-sm btn-ghost" id="btnReverseWiring">
-            Invert Chain ⇄
-          </button>
+        <div class="section-content">
+          <div class="btn-row">
+            <button class="btn btn-sm btn-secondary" id="btnAutoWireSerpentine" title="Route rows alternately left-to-right & right-to-left">
+              Serpentine
+            </button>
+            <button class="btn btn-sm btn-secondary" id="btnAutoWireSpiral" title="Route in an outward spiral from center">
+              Spiral Out
+            </button>
+            <button class="btn btn-sm btn-secondary" id="btnAutoWireRadial" title="Route by distance from center hex">
+              Radial
+            </button>
+          </div>
+          <div class="btn-row" style="margin-top: 8px;">
+            <button class="btn btn-sm btn-ghost danger-text" id="btnClearWiring">
+              Reset Wiring Order
+            </button>
+            <button class="btn btn-sm btn-ghost" id="btnReverseWiring">
+              Invert Chain ⇄
+            </button>
+          </div>
         </div>
       </section>
 
       <!-- Selected Hexagon Inspector -->
       <section class="panel-section" id="inspectorSection">
-        <div class="section-title">Selected Module Inspector</div>
-        <div id="inspectorEmptyState" class="empty-state">
-          <span>Click a hexagon with the Select tool to view/override properties.</span>
+        <div class="section-title collapsible-header">
+          <span>Selected Module Inspector</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
-        <div id="inspectorDetails" class="inspector-content" style="display:none;">
-          <div class="prop-grid">
-            <div class="prop-item">
-              <span class="prop-label">Module ID</span>
-              <span class="prop-value" id="inspId">#1</span>
-            </div>
-            <div class="prop-item">
-              <span class="prop-label">Axial (q, r)</span>
-              <span class="prop-value" id="inspAxial">(0, 0)</span>
-            </div>
-            <div class="prop-item">
-              <span class="prop-label">Chain Index</span>
-              <span class="prop-value highlight" id="inspChain">1 of 7</span>
-            </div>
-            <div class="prop-item">
-              <span class="prop-label">LED Range</span>
-              <span class="prop-value" id="inspLedRange">0 – 17</span>
-            </div>
+        <div class="section-content">
+          <div id="inspectorEmptyState" class="empty-state">
+            <span>Click a hexagon with the Select tool to view/override properties.</span>
           </div>
+          <div id="inspectorDetails" class="inspector-content" style="display:none;">
+            <div class="prop-grid">
+              <div class="prop-item">
+                <span class="prop-label">Module ID</span>
+                <span class="prop-value" id="inspId">#1</span>
+              </div>
+              <div class="prop-item">
+                <span class="prop-label">Axial (q, r)</span>
+                <span class="prop-value" id="inspAxial">(0, 0)</span>
+              </div>
+              <div class="prop-item">
+                <span class="prop-label">Chain Index</span>
+                <span class="prop-value highlight" id="inspChain">1 of 7</span>
+              </div>
+              <div class="prop-item">
+                <span class="prop-label">LED Range</span>
+                <span class="prop-value" id="inspLedRange">0 – 17</span>
+              </div>
+            </div>
 
-          <div class="form-row" style="margin-top: 12px;">
-            <label for="inspStartCorner">Start Vertex Override</label>
-            <select id="inspStartCorner" class="btn-select full-width">
-              <option value="inherit">Inherit Global Default</option>
-              <option value="0">Vertex 0</option>
-              <option value="1">Vertex 1</option>
-              <option value="2">Vertex 2</option>
-              <option value="3">Vertex 3</option>
-              <option value="4">Vertex 4</option>
-              <option value="5">Vertex 5</option>
-            </select>
-          </div>
+            <div class="form-row" style="margin-top: 12px;">
+              <label for="inspStartCorner">Start Vertex Override</label>
+              <select id="inspStartCorner" class="btn-select full-width">
+                <option value="inherit">Inherit Global Default</option>
+                <option value="0">Vertex 0</option>
+                <option value="1">Vertex 1</option>
+                <option value="2">Vertex 2</option>
+                <option value="3">Vertex 3</option>
+                <option value="4">Vertex 4</option>
+                <option value="5">Vertex 5</option>
+              </select>
+            </div>
 
-          <div class="form-row">
-            <label for="inspDirection">Direction Override</label>
-            <select id="inspDirection" class="btn-select full-width">
-              <option value="inherit">Inherit Global Default</option>
-              <option value="cw">Clockwise ↻</option>
-              <option value="ccw">Counter-CW ↺</option>
-            </select>
-          </div>
+            <div class="form-row">
+              <label for="inspDirection">Direction Override</label>
+              <select id="inspDirection" class="btn-select full-width">
+                <option value="inherit">Inherit Global Default</option>
+                <option value="cw">Clockwise ↻</option>
+                <option value="ccw">Counter-CW ↺</option>
+              </select>
+            </div>
 
-          <div class="btn-row" style="margin-top: 8px;">
-            <button class="btn btn-sm btn-danger full-width" id="btnDeleteSelected">Delete Module</button>
+            <div class="btn-row" style="margin-top: 8px;">
+              <button class="btn btn-sm btn-danger full-width" id="btnDeleteSelected">Delete Module</button>
+            </div>
           </div>
         </div>
       </section>
@@ -338,6 +388,9 @@
       <!-- Floating Canvas Overlay Controls -->
       <div class="canvas-toolbar">
         <div class="btn-group">
+          <button class="icon-btn" id="btnToggleSidebar" title="Toggle Sidebar Panel (Collapse for Full Canvas)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
           <button class="icon-btn" id="btnZoomIn" title="Zoom In (+)">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
           </button>
@@ -346,6 +399,15 @@
           </button>
           <button class="icon-btn" id="btnResetView" title="Recenter View">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>
+        </div>
+
+        <div class="btn-group">
+          <button class="icon-btn" id="btnUndo" title="Undo Action (Cmd+Z)" disabled>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          </button>
+          <button class="icon-btn" id="btnRedo" title="Redo Action (Cmd+Shift+Z)" disabled>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
           </button>
         </div>
 
@@ -372,6 +434,36 @@
       <!-- Main Interactive Canvas -->
       <canvas id="mainCanvas"></canvas>
       
+      <!-- Floating Selection Action Bar (Appears when hexagons are selected) -->
+      <div class="selection-action-bar" id="selectionActionBar" style="display: none;">
+        <span class="selection-count-badge" id="selectionCountBadge">0 Selected</span>
+        <div class="bar-divider"></div>
+        <button class="bar-btn" id="btnBarFreeze" title="Save selected shape as reusable module (e.g. hex1)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+          <span>Freeze</span>
+        </button>
+        <button class="bar-btn" id="btnBarCopy" title="Copy selection (Cmd+C)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span>Copy</span>
+        </button>
+        <button class="bar-btn" id="btnBarPaste" title="Paste clipboard (Cmd+V)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          <span>Paste</span>
+        </button>
+        <button class="bar-btn" id="btnBarDuplicate" title="Duplicate selection (Cmd+D)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11v6M9 14h6"/></svg>
+          <span>Duplicate</span>
+        </button>
+        <div class="bar-divider"></div>
+        <button class="bar-btn btn-danger-action" id="btnBarDelete" title="Delete selected hexes (Delete)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span>Delete</span>
+        </button>
+        <button class="bar-btn btn-close-bar" id="btnBarClear" title="Deselect all (Esc)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
       <!-- Quick Action Hint Floating Banner -->
       <div class="quick-hint" id="quickHint">
         <span>💡 Click any open honeycomb slot to add a hexagon. Drag on canvas to pan. Mouse wheel to zoom.</span>

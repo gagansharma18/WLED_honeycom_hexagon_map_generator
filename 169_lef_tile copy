@@ -45,6 +45,13 @@ module hex_cell(is_right_end, is_left_end, is_even_row) {
       translate([-a_outer - 0.1, -groove_width/2, base_floor])
         cube([a_outer - a_inner + 0.2, groove_width, strip_depth + 0.4]);
     }
+
+    // 6. Serpentine Turnaround Tunnel (Row ends only: cuts downwards into internal wall of row below)
+    if ((is_right_end && is_even_row) || (is_left_end && !is_even_row)) {
+      turn_x = is_right_end ? (a_inner - groove_width) : -a_inner;
+      translate([turn_x, -groove_width * 1.3, base_floor])
+        cube([groove_width, groove_width * 1.5, strip_depth + 0.4]);
+    }
   }
 }
 

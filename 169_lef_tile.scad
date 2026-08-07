@@ -10,6 +10,8 @@ base_floor = 0.40;
 led_tray_height = 2.00;
 strip_width = hex_radius - wall_thickness/2; // LED groove width matches inner hexagon face width (9.024mm)
 strip_depth = 1.60;
+bottom_hole_width = (hex_radius - wall_thickness/2) / 2; // Configurable wire cutout width along X axis (half width)
+bottom_hole_height = hex_radius - wall_thickness/2; // Configurable wire cutout height along Y axis
 
 module hex_cell(is_right_end, is_left_end, is_even_row) {
   r_outer = hex_radius + wall_thickness/2;
@@ -48,12 +50,12 @@ module hex_cell(is_right_end, is_left_end, is_even_row) {
 
     // 6. Bottom Plate Wire Cutout Holes (Start and end of each row)
     if (is_left_end) {
-      translate([-a_inner, -groove_width/2, -0.1])
-        cube([groove_width, groove_width, base_floor + 0.2]);
+      translate([-a_inner, -bottom_hole_height/2, -0.1])
+        cube([bottom_hole_width, bottom_hole_height, base_floor + 0.2]);
     }
     if (is_right_end) {
-      translate([a_inner - groove_width, -groove_width/2, -0.1])
-        cube([groove_width, groove_width, base_floor + 0.2]);
+      translate([a_inner - bottom_hole_width, -bottom_hole_height/2, -0.1])
+        cube([bottom_hole_width, bottom_hole_height, base_floor + 0.2]);
     }
   }
 }

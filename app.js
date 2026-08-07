@@ -1934,6 +1934,9 @@ const CadExporter = {
     const stripWidth = options.stripWidth || (r - wall / 2);
     const stripDepth = options.stripDepth || 1.60;
 
+    const bottomHoleWidth = options.bottomHoleWidth || ((r - wall / 2) / 2);
+    const bottomHoleHeight = options.bottomHoleHeight || (r - wall / 2);
+
     // Group hexagons by horizontal rows (using Y coordinate)
     const rowMap = new Map();
     hexagons.forEach(hex => {
@@ -1958,7 +1961,9 @@ const CadExporter = {
     scad += `base_floor = ${baseFloor.toFixed(2)};\n`;
     scad += `led_tray_height = ${ledTray.toFixed(2)};\n`;
     scad += `strip_width = ${stripWidth.toFixed(2)}; // Matches inner hexagon face width (${(r - wall / 2).toFixed(2)}mm)\n`;
-    scad += `strip_depth = ${stripDepth.toFixed(2)};\n\n`;
+    scad += `strip_depth = ${stripDepth.toFixed(2)};\n`;
+    scad += `bottom_hole_width = ${bottomHoleWidth.toFixed(2)}; // Configurable wire cutout width along X axis (half width)\n`;
+    scad += `bottom_hole_height = ${bottomHoleHeight.toFixed(2)}; // Configurable wire cutout height along Y axis\n\n`;
 
     scad += `module hex_cell(is_right_end, is_left_end, is_even_row) {\n`;
     scad += `  r_outer = hex_radius + wall_thickness/2;\n`;
@@ -1988,12 +1993,12 @@ const CadExporter = {
     scad += `    }\n`;
     scad += `    // 6. Bottom Plate Wire Cutout Holes (Start and end of each row)\n`;
     scad += `    if (is_left_end) {\n`;
-    scad += `      translate([-a_inner, -groove_width/2, -0.1])\n`;
-    scad += `        cube([groove_width, groove_width, base_floor + 0.2]);\n`;
+    scad += `      translate([-a_inner, -bottom_hole_height/2, -0.1])\n`;
+    scad += `        cube([bottom_hole_width, bottom_hole_height, base_floor + 0.2]);\n`;
     scad += `    }\n`;
     scad += `    if (is_right_end) {\n`;
-    scad += `      translate([a_inner - groove_width, -groove_width/2, -0.1])\n`;
-    scad += `        cube([groove_width, groove_width, base_floor + 0.2]);\n`;
+    scad += `      translate([a_inner - bottom_hole_width, -bottom_hole_height/2, -0.1])\n`;
+    scad += `        cube([bottom_hole_width, bottom_hole_height, base_floor + 0.2]);\n`;
     scad += `    }\n`;
     scad += `  }\n`;
     scad += `}\n\n`;

@@ -168,6 +168,13 @@ body {
 .right-sidebar {
   width: var(--sidebar-right-width);
   border-left: 1px solid var(--border-subtle);
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+}
+
+.right-sidebar.collapsed {
+  margin-right: calc(-1 * var(--sidebar-right-width));
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Panel Sections */

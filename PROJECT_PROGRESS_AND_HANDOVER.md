@@ -214,8 +214,35 @@ node test_engine.js
   - `169_lef_tile.stl`: Direct download of the authentic 1:1 reference CAD model file.
   - `HexTile_Base_Housing.stl`: Single 3D printable modular base tile with 4 solid sides & 2 bottom connected cutouts.
   - `HexTile_Diffuser_Lid.stl`: Snap-fit translucent top cover plate (with 0.2mm snap-fit tolerance).
-  - `HexGrid_Full_Assembly.stl`: Monolithic 3D STL assembly model of the entire custom honeycomb layout ready for Bambu Studio, Cura, and PrusaSlicer.
+### 8.6 🛠️ OpenSCAD Base Wire Hole Cutout Geometry Refinements
+- **Bottom Floor Wire Hole Cutouts**: Added rectangular wire cutout holes on the bottom base plate at the start (`is_left_end`) and end (`is_right_end`) of every row for wire routing between adjacent hexagon tiles.
+- **Fixed Width Parameter**: Configured `bottom_hole_width = 3.00mm` (fixed) and `bottom_hole_height = hex_radius - wall_thickness/2` in `169_lef_tile.scad` and `generateOpenScad` in `app.js`.
+
+### 8.7 🔲 Editor Multi-Selection, Group Freezing (`hex1`, `hex2`) & Copy-Paste Engine
+- **World-Space Rubberband Box Select Tool (`#toolBoxSelect`)**: Drag a rectangle on the canvas to select multiple hexagons across zoom and pan levels with accurate world coordinate transformation (`screenToWorld()`).
+- **Group Freezing (`freezeSelection()`)**: Freeze any selected hexagon structure into reusable custom sub-modules (`hex1`, `hex2`) stored with relative axial offsets (`{dq, dr}`) from the group centroid. Persisted in `localStorage`.
+- **Copy-Paste Clipboard**: Added `copySelection()`, `pasteClipboard()`, and `duplicateSelection()` with keyboard shortcuts (`Cmd+C`, `Cmd+V`, `Cmd+A`, `Cmd+D`, `Delete`, `Escape`).
+- **Snap-to-Grid Attachment**: Click **Attach to Grid** to enter placement mode. Hovering the canvas renders a cyan ghost preview snapping face-to-face to any existing hexagon grid cell.
+
+### 8.8 ↩️ Undo & Redo History Engine (`HistoryStack`)
+- **Full State Snapshots**: Captures grid state `[{ hexagons, wiringChain }]` up to 50 levels deep before any mutation (adding/deleting hexes, attaching sub-modules, pasting, rewiring, or auto-generating).
+- **Toolbar Controls & Keyboard Shortcuts**:
+  - `[ ↩️ Undo ]` (`Cmd+Z` / `Ctrl+Z`)
+  - `[ ↪️ Redo ]` (`Cmd+Shift+Z` / `Ctrl+Shift+Z` / `Cmd+Y`)
+  - Buttons automatically update enabled/disabled visual opacity states based on history availability.
+
+### 8.9 📐 Independent Left & Right Collapsible Sidebars & Accordion Panels
+- **Dual Sidebar Collapsing (Zen / Full Canvas Mode)**:
+  - **Left Tools Sidebar**: Click `[ ◫ Left ]` or press **`Cmd+B` / `Ctrl+B`** to collapse/expand the left panel.
+  - **Right Telemetry Sidebar**: Click `[ Right ◫ ]` or press **`Cmd+Shift+B` / `Ctrl+Shift+B`** to collapse/expand the right telemetry panel.
+  - Collapsing both panels expands the canvas to **100% of full screen width** for an unconstrained design area!
+- **Collapsible Section Accordions**: Every section header in both sidebars (**Editor Tools**, **Display Mode**, **Saved Sub-Modules**, **Auto-Generate**, **Auto-Wiring Route**, **Selected Inspector**, **WLED Matrix Grid**, **Live FX Simulator**, **WiFi Control**, **Hardware Estimator**) features a collapsible title with chevron indicators (`▼`).
+
+### 8.10 🎨 Cyberpunk Glassmorphic UI Redesign (Floating Selection Dock & Sub-Module Cards)
+- **Floating Selection Dock (`.selection-action-bar`)**: Redesigned floating dock at `bottom: 28px` with dark glassmorphism (`rgba(10, 16, 30, 0.88)`), pill rounded corners (`50px`), cyan border glow (`rgba(0, 242, 254, 0.4)`), and clean vector SVG icons (**Freeze**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Close `✕`**).
+- **Sub-Module Cards**: High-contrast glassmorphic card design with cyan vector polygon icon, cyan count badge (`# Hexes`), primary gradient **Attach to Grid** button (`#00f2fe → #4facfe`), and dark pink **Delete Module** button (`#ff75c3`).
 
 ---
 
-**Current Project Status**: Complete, fully tested, and ready for production deployment.
+**Current Project Status**: Complete, fully verified, unit-tested, and ready for production deployment.
+

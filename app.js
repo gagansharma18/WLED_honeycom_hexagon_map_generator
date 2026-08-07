@@ -3394,16 +3394,26 @@ function sendWledHardwareTestColor(r, g, b) {
     };
     reader.readAsText(file);
   });
-  // Sidebar Collapse / Expand Toggle
-  const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+  // Sidebar Collapse / Expand Toggles (Left & Right)
+  const btnToggleLeftSidebar = document.getElementById('btnToggleLeftSidebar');
+  const btnToggleRightSidebar = document.getElementById('btnToggleRightSidebar');
   const leftSidebar = document.querySelector('.left-sidebar');
-  if (btnToggleSidebar && leftSidebar) {
-    const toggleSidebarFn = () => {
+  const rightSidebar = document.querySelector('.right-sidebar');
+
+  if (btnToggleLeftSidebar && leftSidebar) {
+    btnToggleLeftSidebar.addEventListener('click', () => {
       leftSidebar.classList.toggle('collapsed');
       setTimeout(resizeCanvas, 320);
-      showToast(leftSidebar.classList.contains('collapsed') ? '📐 Full Canvas Design Mode (Sidebar Hidden)' : '📋 Sidebar Panel Expanded');
-    };
-    btnToggleSidebar.addEventListener('click', toggleSidebarFn);
+      showToast(leftSidebar.classList.contains('collapsed') ? '📐 Left Sidebar Collapsed' : '📋 Left Sidebar Expanded');
+    });
+  }
+
+  if (btnToggleRightSidebar && rightSidebar) {
+    btnToggleRightSidebar.addEventListener('click', () => {
+      rightSidebar.classList.toggle('collapsed');
+      setTimeout(resizeCanvas, 320);
+      showToast(rightSidebar.classList.contains('collapsed') ? '📊 Right Sidebar Collapsed' : '📊 Right Sidebar Expanded');
+    });
   }
 
   // Collapsible Panel Section Accordion Headers
@@ -3446,12 +3456,19 @@ function sendWledHardwareTestColor(r, g, b) {
 
     const isCmdOrCtrl = e.metaKey || e.ctrlKey;
 
-    if (isCmdOrCtrl && e.key.toLowerCase() === 'b') {
+    if (isCmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      if (rightSidebar) {
+        rightSidebar.classList.toggle('collapsed');
+        setTimeout(resizeCanvas, 320);
+        showToast(rightSidebar.classList.contains('collapsed') ? '📊 Right Sidebar Collapsed' : '📊 Right Sidebar Expanded');
+      }
+    } else if (isCmdOrCtrl && e.key.toLowerCase() === 'b') {
       e.preventDefault();
       if (leftSidebar) {
         leftSidebar.classList.toggle('collapsed');
         setTimeout(resizeCanvas, 320);
-        showToast(leftSidebar.classList.contains('collapsed') ? '📐 Full Canvas Design Mode (Sidebar Hidden)' : '📋 Sidebar Panel Expanded');
+        showToast(leftSidebar.classList.contains('collapsed') ? '📐 Left Sidebar Collapsed' : '📋 Left Sidebar Expanded');
       }
     } else if (isCmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'z') {
       e.preventDefault();

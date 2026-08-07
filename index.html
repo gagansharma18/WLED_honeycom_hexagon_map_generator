@@ -388,8 +388,11 @@
       <!-- Floating Canvas Overlay Controls -->
       <div class="canvas-toolbar">
         <div class="btn-group">
-          <button class="icon-btn" id="btnToggleSidebar" title="Toggle Sidebar Panel (Collapse for Full Canvas)">
+          <button class="icon-btn" id="btnToggleLeftSidebar" title="Toggle Left Tools Sidebar (Cmd+B)">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
+          <button class="icon-btn" id="btnToggleRightSidebar" title="Toggle Right Telemetry Sidebar (Cmd+Shift+B)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
           </button>
           <button class="icon-btn" id="btnZoomIn" title="Zoom In (+)">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -474,172 +477,189 @@
     <aside class="sidebar right-sidebar">
       <!-- Live WLED 2D Matrix Specs & Telemetry -->
       <section class="panel-section">
-        <div class="section-title">
-          <span>WLED 2D Matrix Grid</span>
-          <span class="badge-tag" id="matrixDimensionsBadge">16 × 14</span>
+        <div class="section-title collapsible-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>WLED 2D Matrix Grid</span>
+            <span class="badge-tag" id="matrixDimensionsBadge">16 × 14</span>
+          </div>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
-        
-        <div class="matrix-stat-cards">
-          <div class="stat-card">
-            <span class="sc-label">Total LEDs</span>
-            <span class="sc-value cyan" id="statTotalLeds">126</span>
+        <div class="section-content">
+          <div class="matrix-stat-cards">
+            <div class="stat-card">
+              <span class="sc-label">Total LEDs</span>
+              <span class="sc-value cyan" id="statTotalLeds">126</span>
+            </div>
+            <div class="stat-card">
+              <span class="sc-label">Grid Bounding</span>
+              <span class="sc-value" id="statBoundingSize">16 × 14</span>
+            </div>
+            <div class="stat-card">
+              <span class="sc-label">Gap Pixels (-1)</span>
+              <span class="sc-value" id="statGapCount">98</span>
+            </div>
+            <div class="stat-card">
+              <span class="sc-label">Fill Efficiency</span>
+              <span class="sc-value" id="statEfficiency">56.2%</span>
+            </div>
           </div>
-          <div class="stat-card">
-            <span class="sc-label">Grid Bounding</span>
-            <span class="sc-value" id="statBoundingSize">16 × 14</span>
-          </div>
-          <div class="stat-card">
-            <span class="sc-label">Gap Pixels (-1)</span>
-            <span class="sc-value" id="statGapCount">98</span>
-          </div>
-          <div class="stat-card">
-            <span class="sc-label">Fill Efficiency</span>
-            <span class="sc-value" id="statEfficiency">56.2%</span>
-          </div>
-        </div>
 
-        <div class="form-row" style="margin-top: 10px;">
-          <label for="quantizationDensity">Matrix Sampling Sub-grid</label>
-          <select id="quantizationDensity" class="btn-select full-width">
-            <option value="auto" selected>Auto-Fit (Exact Corner & Edge Match)</option>
-            <option value="1">1x Grid (Fast 2D lookup)</option>
-            <option value="2">2x Grid (Smoother 2D curve interpolation)</option>
-          </select>
-        </div>
-
-        <!-- 2D Matrix Mini-Map Preview -->
-        <div class="matrix-preview-container">
-          <div class="preview-header">
-            <span>2D Cartesian Projection Preview</span>
-            <span id="miniMatrixTooltip" class="dimmed-text">Hover pixel for ID</span>
+          <div class="form-row" style="margin-top: 10px;">
+            <label for="quantizationDensity">Matrix Sampling Sub-grid</label>
+            <select id="quantizationDensity" class="btn-select full-width">
+              <option value="auto" selected>Auto-Fit (Exact Corner & Edge Match)</option>
+              <option value="1">1x Grid (Fast 2D lookup)</option>
+              <option value="2">2x Grid (Smoother 2D curve interpolation)</option>
+            </select>
           </div>
-          <canvas id="miniMatrixCanvas" width="220" height="180"></canvas>
+
+          <!-- 2D Matrix Mini-Map Preview -->
+          <div class="matrix-preview-container">
+            <div class="preview-header">
+              <span>2D Cartesian Projection Preview</span>
+              <span id="miniMatrixTooltip" class="dimmed-text">Hover pixel for ID</span>
+            </div>
+            <canvas id="miniMatrixCanvas" width="220" height="180"></canvas>
+          </div>
         </div>
       </section>
 
       <!-- Live WLED FX Simulator -->
       <section class="panel-section">
-        <div class="section-title">
-          <span>Live FX Simulator</span>
-          <button class="sim-play-btn" id="btnSimPlay" title="Play/Pause Simulator">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" id="simPlayIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <span id="simPlayText">Simulate</span>
-          </button>
-        </div>
-
-        <div class="form-row">
-          <label for="fxSelector">WLED Effect</label>
-          <select id="fxSelector" class="btn-select full-width">
-            <option value="plasma_2d" selected>🌌 2D Color Plasma & Noise</option>
-            <option value="matrix_rain">💻 Cyberpunk Matrix Rain</option>
-            <option value="galaxy_spiral">🌀 Rotating Spiral Galaxy</option>
-            <option value="neon_wave">⚡ Electric Neon Wave</option>
-            <option value="fireworks">🎆 Fireworks Burst Explosion</option>
-            <option value="kaleidoscope">💎 Hexagon Kaleidoscope</option>
-            <option value="starfield">✨ Deep Space Starfield</option>
-            <option value="rainbow_runner">🌈 Rainbow Edge Runner</option>
-            <option value="radial_ripple">🌊 Expanding Radial Ripple</option>
-            <option value="audio_reactive">🎵 Audio Reactive Pulse (GEQ)</option>
-            <option value="fire_2d">🔥 Fire 2D Matrix</option>
-            <option value="tracer_single">💡 Single LED Tracer (Wiring Test)</option>
-            <option value="solid_color">🎨 Solid Palette Test</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <label for="fxPalette">Color Palette</label>
-          <select id="fxPalette" class="btn-select full-width">
-            <option value="rainbow">Rainbow / Spectrum</option>
-            <option value="cyberpunk" selected>Cyberpunk (Cyan / Magenta / Neon)</option>
-            <option value="ocean">Ocean Breeze (Teal / Deep Blue)</option>
-            <option value="fire">Lava & Fire (Red / Orange / Yellow)</option>
-            <option value="forest">Emerald Forest (Mint / Green)</option>
-            <option value="sunset">Sunset Glow (Purple / Gold)</option>
-          </select>
-        </div>
-
-        <div class="form-row slider-row">
-          <div class="slider-header">
-            <label for="fxSpeed">Animation Speed</label>
-            <span class="slider-val" id="valFxSpeed">1.0x</span>
+        <div class="section-title collapsible-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>Live FX Simulator</span>
+            <button class="sim-play-btn" id="btnSimPlay" title="Play/Pause Simulator" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" id="simPlayIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span id="simPlayText">Simulate</span>
+            </button>
           </div>
-          <input type="range" id="fxSpeed" min="0.1" max="3.0" step="0.1" value="1.0" class="custom-slider">
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
-
-        <div class="form-row slider-row">
-          <div class="slider-header">
-            <label for="fxBrightness">Brightness</label>
-            <span class="slider-val" id="valFxBrightness">100%</span>
+        <div class="section-content">
+          <div class="form-row">
+            <label for="fxSelector">WLED Effect</label>
+            <select id="fxSelector" class="btn-select full-width">
+              <option value="plasma_2d" selected>🌌 2D Color Plasma & Noise</option>
+              <option value="matrix_rain">💻 Cyberpunk Matrix Rain</option>
+              <option value="galaxy_spiral">🌀 Rotating Spiral Galaxy</option>
+              <option value="neon_wave">⚡ Electric Neon Wave</option>
+              <option value="fireworks">🎆 Fireworks Burst Explosion</option>
+              <option value="kaleidoscope">💎 Hexagon Kaleidoscope</option>
+              <option value="starfield">✨ Deep Space Starfield</option>
+              <option value="rainbow_runner">🌈 Rainbow Edge Runner</option>
+              <option value="radial_ripple">🌊 Expanding Radial Ripple</option>
+              <option value="audio_reactive">🎵 Audio Reactive Pulse (GEQ)</option>
+              <option value="fire_2d">🔥 Fire 2D Matrix</option>
+              <option value="tracer_single">💡 Single LED Tracer (Wiring Test)</option>
+              <option value="solid_color">🎨 Solid Palette Test</option>
+            </select>
           </div>
-          <input type="range" id="fxBrightness" min="10" max="100" step="5" value="100" class="custom-slider">
+
+          <div class="form-row">
+            <label for="fxPalette">Color Palette</label>
+            <select id="fxPalette" class="btn-select full-width">
+              <option value="rainbow">Rainbow / Spectrum</option>
+              <option value="cyberpunk" selected>Cyberpunk (Cyan / Magenta / Neon)</option>
+              <option value="ocean">Ocean Breeze (Teal / Deep Blue)</option>
+              <option value="fire">Lava & Fire (Red / Orange / Yellow)</option>
+              <option value="forest">Emerald Forest (Mint / Green)</option>
+              <option value="sunset">Sunset Glow (Purple / Gold)</option>
+            </select>
+          </div>
+
+          <div class="form-row slider-row">
+            <div class="slider-header">
+              <label for="fxSpeed">Animation Speed</label>
+              <span class="slider-val" id="valFxSpeed">1.0x</span>
+            </div>
+            <input type="range" id="fxSpeed" min="0.1" max="3.0" step="0.1" value="1.0" class="custom-slider">
+          </div>
+
+          <div class="form-row slider-row">
+            <div class="slider-header">
+              <label for="fxBrightness">Brightness</label>
+              <span class="slider-val" id="valFxBrightness">100%</span>
+            </div>
+            <input type="range" id="fxBrightness" min="10" max="100" step="5" value="100" class="custom-slider">
+          </div>
         </div>
       </section>
 
       <!-- Direct WLED Hardware Control & Live WiFi Sync -->
       <section class="panel-section" style="border-color: rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.03);">
-        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-          <span>🌐 WLED Hardware WiFi Control</span>
-          <span class="badge-tag" id="wledSyncStatusBadge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">Disconnected</span>
-        </div>
-
-        <div class="form-row">
-          <label for="wledIpAddress">WLED Controller IP Address</label>
-          <div style="display: flex; gap: 6px;">
-            <input type="text" id="wledIpAddress" class="btn-select" style="flex: 1; font-family: 'JetBrains Mono', monospace;" value="10.130.79.95" placeholder="192.168.1.100">
-            <button class="btn btn-secondary btn-sm" id="btnTestWledConn" title="Test WLED Connection">Test</button>
+        <div class="section-title collapsible-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>🌐 WLED Hardware WiFi Control</span>
+            <span class="badge-tag" id="wledSyncStatusBadge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">Disconnected</span>
           </div>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
+        <div class="section-content">
+          <div class="form-row">
+            <label for="wledIpAddress">WLED Controller IP Address</label>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="wledIpAddress" class="btn-select" style="flex: 1; font-family: 'JetBrains Mono', monospace;" value="10.130.79.95" placeholder="192.168.1.100">
+              <button class="btn btn-secondary btn-sm" id="btnTestWledConn" title="Test WLED Connection">Test</button>
+            </div>
+          </div>
 
-        <div class="btn-row" style="margin-top: 8px; gap: 6px;">
-          <button class="btn btn-primary glow-btn full-width" id="btnToggleWledLiveSync">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            <span id="btnWledLiveSyncText">⚡ Stream Live FX to Hardware</span>
-          </button>
-        </div>
+          <div class="btn-row" style="margin-top: 8px; gap: 6px;">
+            <button class="btn btn-primary glow-btn full-width" id="btnToggleWledLiveSync">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              <span id="btnWledLiveSyncText">⚡ Stream Live FX to Hardware</span>
+            </button>
+          </div>
 
-        <div class="btn-row" style="margin-top: 6px; gap: 6px;">
-          <button class="btn btn-secondary full-width" id="btnTriggerNativePlasma" style="font-size: 11px; background: rgba(0, 242, 254, 0.1); border-color: rgba(0, 242, 254, 0.4);">
-            <span>✨ Trigger Native WLED 2D Plasma</span>
-          </button>
-        </div>
+          <div class="btn-row" style="margin-top: 6px; gap: 6px;">
+            <button class="btn btn-secondary full-width" id="btnTriggerNativePlasma" style="font-size: 11px; background: rgba(0, 242, 254, 0.1); border-color: rgba(0, 242, 254, 0.4);">
+              <span>✨ Trigger Native WLED 2D Plasma</span>
+            </button>
+          </div>
 
-        <div class="btn-row" style="margin-top: 6px;">
-          <button class="btn btn-secondary full-width" id="btnDirectPushLedmap" style="font-size: 11px; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4);" title="Auto-uploads ledmap.json, 2d.json, cfg.json & configures all LEDs in 1 click">
-            <span>🚀 1-Click Auto-Configure WLED</span>
-          </button>
-        </div>
+          <div class="btn-row" style="margin-top: 6px;">
+            <button class="btn btn-secondary full-width" id="btnDirectPushLedmap" style="font-size: 11px; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4);" title="Auto-uploads ledmap.json, 2d.json, cfg.json & configures all LEDs in 1 click">
+              <span>🚀 1-Click Auto-Configure WLED</span>
+            </button>
+          </div>
 
-        <div class="form-row" style="margin-top: 10px;">
-          <label>💡 Hardware Diagnostics (Override Test)</label>
-          <div style="display: flex; gap: 4px;">
-            <button class="btn btn-secondary btn-sm" id="btnTestWhite" style="flex: 1; padding: 4px 2px; font-size: 10px;" title="Solid White 100%">⚪ White</button>
-            <button class="btn btn-secondary btn-sm" id="btnTestRed" style="flex: 1; padding: 4px 2px; font-size: 10px; color: #f87171;" title="Solid Red">🔴 Red</button>
-            <button class="btn btn-secondary btn-sm" id="btnTestGreen" style="flex: 1; padding: 4px 2px; font-size: 10px; color: #34d399;" title="Solid Green">🟢 Green</button>
-            <button class="btn btn-secondary btn-sm" id="btnTestBlue" style="flex: 1; padding: 4px 2px; font-size: 10px; color: #38bdf8;" title="Solid Blue">🔵 Blue</button>
-            <button class="btn btn-secondary btn-sm" id="btnTestOff" style="flex: 1; padding: 4px 2px; font-size: 10px; color: #9ca3af;" title="Turn OFF">⬛ Off</button>
+          <div class="form-row" style="margin-top: 10px;">
+            <label>💡 Hardware Diagnostics (Override Test)</label>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-secondary btn-sm" id="btnTestWhite" style="flex: 1; padding: 4px 2px; font-size: 10px;" title="Solid White 100%">⚪ White</button>
+              <button class="btn btn-secondary btn-sm" id="btnTestRed" style="flex: 1; padding: 4px 2px; font-size: 10px; color: #f87171;" title="Solid Red">🔴 Red</button>
+              <button class="btn btn-secondary btn-sm" id="btnTestGreen" style="flex: 1; padding: 4px 2px; font-size: 10px; color: #34d399;" title="Solid Green">🟢 Green</button>
+              <button class="btn btn-secondary btn-sm" id="btnTestBlue" style="flex: 1; padding: 4px 2px; font-size: 10px; color: #38bdf8;" title="Solid Blue">🔵 Blue</button>
+              <button class="btn btn-secondary btn-sm" id="btnTestOff" style="flex: 1; padding: 4px 2px; font-size: 10px; color: #9ca3af;" title="Turn OFF">⬛ Off</button>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- Hardware & Power Estimator -->
       <section class="panel-section">
-        <div class="section-title">Hardware & Power Estimation</div>
-        <div class="hardware-specs">
-          <div class="hw-item">
-            <span class="hw-label">Max Power (100% White @ 5V):</span>
-            <span class="hw-val" id="hwPowerMax">7.56 A / 37.8 W</span>
-          </div>
-          <div class="hw-item">
-            <span class="hw-label">Typical Animation Power:</span>
-            <span class="hw-val highlight" id="hwPowerTypical">2.52 A / 12.6 W</span>
-          </div>
-          <div class="hw-item">
-            <span class="hw-label">Recommended PSU:</span>
-            <span class="hw-val" id="hwPowerPSU">5V 4A+ or 12V with buck</span>
-          </div>
-          <div class="hw-item">
-            <span class="hw-label">Power Injections Suggested:</span>
-            <span class="hw-val" id="hwInjections">1 Point (At Start)</span>
+        <div class="section-title collapsible-header">
+          <span>Hardware & Power Estimation</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        <div class="section-content">
+          <div class="hardware-specs">
+            <div class="hw-item">
+              <span class="hw-label">Max Power (100% White @ 5V):</span>
+              <span class="hw-val" id="hwPowerMax">7.56 A / 37.8 W</span>
+            </div>
+            <div class="hw-item">
+              <span class="hw-label">Typical Animation Power:</span>
+              <span class="hw-val highlight" id="hwPowerTypical">2.52 A / 12.6 W</span>
+            </div>
+            <div class="hw-item">
+              <span class="hw-label">Recommended PSU:</span>
+              <span class="hw-val" id="hwPowerPSU">5V 4A+ or 12V with buck</span>
+            </div>
+            <div class="hw-item">
+              <span class="hw-label">Power Injections Suggested:</span>
+              <span class="hw-val" id="hwInjections">1 Point (At Start)</span>
+            </div>
           </div>
         </div>
       </section>
